@@ -12,6 +12,49 @@ import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { createClient, RedisClientType } from "redis";
 import { secretProvider } from "./secret-provider";
 
+export type PayloadVersion = '1.0';
+
+export interface SubscriptionEventPayload {
+  subscriptionId: string;
+  operation: string;
+  subscriptionName: string;
+  price: string | number;
+  billingCycle: string;
+  status: string;
+  timestamp: string;
+}
+
+export interface ReminderEventPayload {
+  subscriptionId: string;
+  subscriptionName: string;
+  reminderType: string;
+  renewalDate: string;
+  daysBefore: number;
+  price: string | number;
+  billingCycle: string;
+  deliveryChannels: string[];
+  timestamp: string;
+}
+
+export interface GiftCardEventPayload {
+  subscriptionId: string;
+  giftCardHash: string;
+  provider: string;
+  eventType: string;
+  timestamp: string;
+}
+
+export interface DLQPayload<T = unknown> {
+  version: PayloadVersion;
+  eventType: string;
+  payload: T;
+  failedAt: string;
+  errorReason: string;
+  retryCount: number;
+  contractAddress?: string | null;
+  rpcUrl?: string;
+}
+
 export interface BlockchainLogEntry {
   user_id: string;
   event_type: string;
@@ -172,7 +215,7 @@ export class BlockchainService {
    * Write event data to Soroban contract
    */
   private async writeToBlockchain(
-    eventData: Record<string, any>,
+    eventData: ReminderEventPayload,
   ): Promise<{ transactionHash: string }> {
     return this.invokeContractWithRetry("log_reminder", this.encodeReminderArgs(eventData));
   }
@@ -320,7 +363,7 @@ export class BlockchainService {
    */
   private async writeSubscriptionToBlockchain(
     operation: "create" | "update" | "delete" | "cancel" | "pause" | "unpause",
-    eventData: Record<string, any>,
+    eventData: SubscriptionEventPayload,
   ): Promise<{ transactionHash: string }> {
     const method = `subscription_${operation}`;
     return this.invokeContractWithRetry(method, this.encodeSubscriptionArgs(eventData));
@@ -413,7 +456,7 @@ export class BlockchainService {
   }
 
   private async writeGiftCardToBlockchain(
-    eventData: Record<string, any>
+    eventData: GiftCardEventPayload
   ): Promise<{ transactionHash: string }> {
     return this.invokeContractWithRetry("gift_card_attached", this.encodeGiftCardArgs(eventData));
   }
@@ -486,12 +529,14 @@ export class BlockchainService {
 
     // After all retries failed, enqueue to DLQ if available
     await this.enqueueDeadLetter({
-      method,
-      argsJson: this.previewArgs(args),
+      version: '1.0',
+      eventType: method,
+      payload: this.previewArgs(args),
+      failedAt: new Date().toISOString(),
+      errorReason: lastErr instanceof Error ? lastErr.message : String(lastErr),
+      retryCount: this.maxRetries,
       contractAddress: this.contractAddress,
       rpcUrl: this.rpcUrl,
-      error: lastErr instanceof Error ? lastErr.message : String(lastErr),
-      createdAt: new Date().toISOString(),
     });
 
     throw new Error(
@@ -501,7 +546,7 @@ export class BlockchainService {
     );
   }
 
-  private encodeReminderArgs(eventData: Record<string, any>): xdr.ScVal[] {
+  private encodeReminderArgs(eventData: ReminderEventPayload): xdr.ScVal[] {
     return [
       xdr.ScVal.scvString(eventData.subscriptionId),
       xdr.ScVal.scvString(eventData.subscriptionName ?? ""),
@@ -517,7 +562,7 @@ export class BlockchainService {
     ];
   }
 
-  private encodeSubscriptionArgs(eventData: Record<string, any>): xdr.ScVal[] {
+  private encodeSubscriptionArgs(eventData: SubscriptionEventPayload): xdr.ScVal[] {
     return [
       xdr.ScVal.scvString(eventData.subscriptionId),
       xdr.ScVal.scvString(eventData.operation ?? ""),
@@ -529,7 +574,7 @@ export class BlockchainService {
     ];
   }
 
-  private encodeGiftCardArgs(eventData: Record<string, any>): xdr.ScVal[] {
+  private encodeGiftCardArgs(eventData: GiftCardEventPayload): xdr.ScVal[] {
     return [
       xdr.ScVal.scvString(eventData.subscriptionId),
       xdr.ScVal.scvString(eventData.giftCardHash),
@@ -538,7 +583,7 @@ export class BlockchainService {
     ];
   }
 
-  private async enqueueDeadLetter(payload: Record<string, any>): Promise<void> {
+  private async enqueueDeadLetter<T>(payload: DLQPayload<T>): Promise<void> {
     const dlqKey = "dlq:blockchain_tx";
     try {
       if (this.redisClient) {
