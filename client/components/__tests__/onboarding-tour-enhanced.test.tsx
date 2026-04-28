@@ -1,8 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, expect, beforeEach, test, vi } from 'vitest'
 import { OnboardingTourEnhanced, useOnboardingTourEnhanced } from '../onboarding-tour-enhanced'
 
 // Mock react-joyride-react-19
-jest.mock('react-joyride-react-19', () => {
+vi.mock('react-joyride-react-19', () => {
   return function MockJoyride({ run, steps, callback }: any) {
     if (!run) return null
     
@@ -45,7 +46,7 @@ describe('OnboardingTourEnhanced', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear()
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   describe('useOnboardingTourEnhanced hook', () => {
@@ -110,7 +111,7 @@ describe('OnboardingTourEnhanced', () => {
     })
 
     test('should handle tour completion', async () => {
-      const onComplete = jest.fn()
+      const onComplete = vi.fn()
       
       render(<OnboardingTourEnhanced autoStart={true} onComplete={onComplete} />)
       
@@ -125,7 +126,7 @@ describe('OnboardingTourEnhanced', () => {
     })
 
     test('should handle tour skip', async () => {
-      const onSkip = jest.fn()
+      const onSkip = vi.fn()
       
       render(<OnboardingTourEnhanced autoStart={true} onSkip={onSkip} />)
       
