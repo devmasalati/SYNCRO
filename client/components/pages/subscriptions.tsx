@@ -32,6 +32,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { VirtualizedList } from "@/components/ui/virtualized-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { Skeleton } from "@/components/ui/skeleton";
 import CancellationGuideModal from "@/components/modals/cancellation-guide-modal";
 import {
   fetchAllCancellationGuides,
@@ -68,7 +69,7 @@ interface SubscriptionsPageProps {
   onImportComplete?: () => void;
   onPause?: (subscription: Subscription) => void;
   onResume?: (subscription: Subscription) => void;
-  pausedCount?: number;
+  isLoading?: boolean;
 }
 
 export default function SubscriptionsPage({
@@ -89,7 +90,7 @@ export default function SubscriptionsPage({
   onResume,
   onCancelTrial,
   onConvertTrial,
-  pausedCount = 0,
+  isLoading = false,
 }: SubscriptionsPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -101,7 +102,6 @@ export default function SubscriptionsPage({
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
   const [showUnusedOnly, setShowUnusedOnly] = useState(false);
-  const [showPausedOnly, setShowPausedOnly] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [showCSVImport, setShowCSVImport] = useState(false);
@@ -249,16 +249,6 @@ export default function SubscriptionsPage({
       );
     }
 
-    if (showPausedOnly) {
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        matchesEmail &&
-        matchesPrice &&
-        sub.status === "paused"
-      );
-    }
-
     return (
       matchesSearch &&
       matchesCategory &&
@@ -295,7 +285,7 @@ export default function SubscriptionsPage({
         new Date(a.trialEndsAt!).getTime() - new Date(b.trialEndsAt!).getTime(),
     );
 
-  if (hasNoSubscriptions) {
+  if (hasNoSubscriptions && !isLoading) {
     return (
       <EmptyState
         icon="📦"
@@ -307,6 +297,20 @@ export default function SubscriptionsPage({
         }}
         darkMode={darkMode}
       />
+    );
+  }
+
+  if (hasNoSubscriptions && isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <SubscriptionCardSkeleton
+            key={i}
+            darkMode={darkMode}
+            hasCheckbox={selectedSubscriptions.size > 0}
+          />
+        ))}
+      </div>
     );
   }
 
@@ -443,7 +447,6 @@ export default function SubscriptionsPage({
             onClick={() => {
               setShowDuplicatesOnly(!showDuplicatesOnly);
               setShowUnusedOnly(false);
-              setShowPausedOnly(false);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               showDuplicatesOnly
@@ -462,7 +465,6 @@ export default function SubscriptionsPage({
             onClick={() => {
               setShowUnusedOnly(!showUnusedOnly);
               setShowDuplicatesOnly(false);
-              setShowPausedOnly(false);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               showUnusedOnly
@@ -474,25 +476,6 @@ export default function SubscriptionsPage({
           >
             <Clock className="w-4 h-4" />
             Potentially Wasted ({unusedSubscriptions.length})
-          </button>
-        )}
-        {pausedCount > 0 && (
-          <button
-            onClick={() => {
-              setShowPausedOnly(!showPausedOnly);
-              setShowDuplicatesOnly(false);
-              setShowUnusedOnly(false);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showPausedOnly
-                ? "bg-[#FFD166] text-[#1E2A35]"
-                : darkMode
-                ? "bg-[#2D3748] text-gray-400 hover:text-white"
-                : "bg-gray-100 text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <PauseCircle className="w-4 h-4" />
-            Paused ({pausedCount})
           </button>
         )}
         <button
@@ -1436,6 +1419,65 @@ function BrokenCardPlaceholder({
         >
           Unavailable
         </p>
+      </div>
+    </div>
+  );
+}
+
+interface SubscriptionCardSkeletonProps {
+  darkMode?: boolean;
+  hasCheckbox?: boolean;
+}
+
+export function SubscriptionCardSkeleton({
+  darkMode,
+  hasCheckbox = false,
+}: SubscriptionCardSkeletonProps) {
+  return (
+    <div
+      className={`${
+        darkMode ? "bg-[#2D3748] border-[#374151]" : "bg-white border-gray-200"
+      } border rounded-xl p-5 flex items-center justify-between`}
+    >
+      <div className="flex items-center gap-4 flex-1">
+        {hasCheckbox && <Skeleton className="w-4 h-4 rounded" />}
+        <Skeleton className="w-12 h-12 rounded-lg" />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-16 rounded-full" />
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-3 w-3 rounded-full" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <Skeleton className="h-4 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-3 w-40 mt-1" />
+        </div>
+      </div>
+      <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end gap-1">
+            <Skeleton className="h-6 w-16 rounded-md" />
+          </div>
+          <div className="text-right min-w-32">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-12 rounded-full mt-1" />
+          </div>
+        </div>
+        <div className="text-right">
+          <Skeleton className="h-5 w-12" />
+          <Skeleton className="h-3 w-8" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="w-8 h-8 rounded-lg" />
+          <Skeleton className="w-8 h-8 rounded-lg" />
+          <Skeleton className="w-8 h-8 rounded-lg" />
+          <Skeleton className="w-8 h-8 rounded-lg" />
+        </div>
       </div>
     </div>
   );

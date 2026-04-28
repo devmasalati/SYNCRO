@@ -159,9 +159,12 @@ export function useSubscriptions({
     canRedo,
   } = useUndoManager<SubscriptionState>(initialSubscriptions as SubscriptionState[]);
 
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     const fetchSubscriptions = async () => {
+      setLoading(true);
       try {
         const data = await apiGet("/api/subscriptions");
         if (!mounted) return;
@@ -173,6 +176,8 @@ export function useSubscriptions({
         }
       } catch {
         // ignore - keep initial subscriptions
+      } finally {
+        setLoading(false);
       }
     };
 
