@@ -22,34 +22,126 @@ function makeQuery(result: any) {
   return query as unknown as SupabaseQuery
 }
 
-describe('HomePage server payload', () => {
+describe('getInitialData — unauthenticated', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  it('returns empty initial data for unauthenticated users', async () => {
+  it('returns isDemo=true with empty datasets for unauthenticated users', async () => {
     const mockSupabase = {
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: new Error('No session') }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
       },
     }
-
     vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
 
-    const initialData = await getInitialData()
+    const result = await getInitialData()
 
-    expect(initialData).toEqual({
-      subscriptions: [],
-      emailAccounts: [],
-      payments: [],
-      priceChanges: [],
-      consolidationSuggestions: [],
+    expect(result.isDemo).toBe(true)
+    expect(result.warnings).toHaveLength(0)
+    expect(result.subscriptions).toEqual([])
+    expect(result.emailAccounts).toEqual([])
+  })
+
+  it('returns isDemo=true when auth throws', async () => {
+    vi.mocked(createClient).mockRejectedValue(new Error('connection refused'))
+
+    const result = await getInitialData()
+
+    expect(result.isDemo).toBe(true)
+    expect(result.warnings).toHaveLength(0)
+  })
+})
+
+describe('getInitialData — partial failures', () => {
+  const mockUser = { id: 'user-123' }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  it('adds a warning and returns empty array when subscriptions query fails', async () => {
+    const failedQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: null, error: { message: 'timeout', code: 'PGRST_TIMEOUT' } }),
+    }
+    const okQuery = makeQuery({ data: [], error: null })
+    const priceHistoryQuery = makeQuery({ data: [], error: null })
+
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'subscriptions') return failedQuery
+      if (table === 'subscription_price_history') return priceHistoryQuery
+      return okQuery
     })
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+      from: fromMock,
+    } as any)
+
+    const result = await getInitialData()
+
+    expect(result.isDemo).toBe(false)
+    expect(result.subscriptions).toEqual([])
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ query: 'subscriptions' }),
+      ]),
+    )
+  })
+
+  it('adds a warning and returns empty array when email_accounts query fails', async () => {
+    const okQuery = makeQuery({ data: [], error: null })
+    const failedQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: null, error: { message: 'forbidden', status: 403 } }),
+    }
+
+    const fromMock = vi.fn((table: string) => {
+      if (table === 'email_accounts') return failedQuery
+      return okQuery
+    })
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+      from: fromMock,
+    } as any)
+
+    const result = await getInitialData()
+
+    expect(result.emailAccounts).toEqual([])
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ query: 'email_accounts' }),
+      ]),
+    )
+  })
+
+  it('surfaces warnings for all failed queries independently (partial load)', async () => {
+    const failedQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: null, error: { message: 'error', code: '500' } }),
+    }
+
+    vi.mocked(createClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
+      from: vi.fn().mockReturnValue(failedQuery),
+    } as any)
+
+    const result = await getInitialData()
+
+    const queryNames = result.warnings.map((w) => w.query)
+    expect(queryNames).toContain('subscriptions')
+    expect(queryNames).toContain('email_accounts')
+    expect(queryNames).toContain('payments')
   })
 
   it('loads and normalizes historical price changes for authenticated users', async () => {
-    const mockUser = { id: 'user-123' }
-
     const subscriptionsResult = {
       data: [
         {
@@ -86,8 +178,6 @@ describe('HomePage server payload', () => {
       error: null,
     }
 
-    const emailAccountsResult = { data: [], error: null }
-    const paymentsResult = { data: [], error: null }
     const priceHistoryResult = {
       data: [
         {
@@ -103,25 +193,20 @@ describe('HomePage server payload', () => {
 
     const fromMock = vi.fn((table: string) => {
       if (table === 'subscriptions') return makeQuery(subscriptionsResult)
-      if (table === 'email_accounts') return makeQuery(emailAccountsResult)
-      if (table === 'payments') return makeQuery(paymentsResult)
       if (table === 'subscription_price_history') return makeQuery(priceHistoryResult)
       return makeQuery({ data: [], error: null })
     })
 
-    const mockSupabase = {
-      auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
-      },
+    vi.mocked(createClient).mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }) },
       from: fromMock,
-    }
+    } as any)
 
-    vi.mocked(createClient).mockResolvedValue(mockSupabase as any)
+    const result = await getInitialData()
 
-    const initialData = await getInitialData()
-
-    expect(initialData.priceChanges).toHaveLength(1)
-    expect(initialData.priceChanges[0]).toMatchObject({
+    expect(result.warnings).toHaveLength(0)
+    expect(result.priceChanges).toHaveLength(1)
+    expect(result.priceChanges[0]).toMatchObject({
       id: 'history-uuid',
       subscriptionId: 1,
       name: 'ChatGPT Plus',

@@ -4,6 +4,7 @@
  */
 
 import type { Subscription as DBSubscription } from "@/lib/supabase/subscriptions";
+import type { DataLoadWarning } from "@/lib/dashboard-bootstrap";
 
 /**
  * Email account linked to user subscriptions
@@ -100,4 +101,6 @@ export interface AppClientProps {
     initialPayments: Payment[];
     initialPriceChanges?: PriceChange[];
     initialConsolidationSuggestions?: ConsolidationSuggestion[];
+    dataLoadWarnings?: DataLoadWarning[];
+    isDemo?: boolean;
 }

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { buildQueryWarning, type DataLoadWarning } from '@/lib/dashboard-bootstrap'
 
 export type InitialPriceChange = {
   id: string
@@ -10,6 +11,16 @@ export type InitialPriceChange = {
   changeType: 'increase' | 'decrease'
   annualImpact: number
   percentChange: number
+}
+
+export type InitialDataResult = {
+  subscriptions: any[]
+  emailAccounts: any[]
+  payments: any[]
+  priceChanges: InitialPriceChange[]
+  consolidationSuggestions: any[]
+  warnings: DataLoadWarning[]
+  isDemo: boolean
 }
 
 function transformSubscription(dbSub: any): any {
@@ -67,76 +78,134 @@ function normalizePriceChange(
   }
 }
 
-export async function getInitialData() {
+export async function getInitialData(): Promise<InitialDataResult> {
+  const warnings: DataLoadWarning[] = []
+
+  let supabase: Awaited<ReturnType<typeof createClient>>
+  let user: { id: string } | null = null
+
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return {
-        subscriptions: [],
-        emailAccounts: [],
-        payments: [],
-        priceChanges: [],
-        consolidationSuggestions: [],
-      }
+    supabase = await createClient()
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error('[dashboard] auth.getUser failed', {
+        component: 'getInitialData',
+        query: 'auth',
+        code: error.status,
+        message: error.message,
+      })
     }
-
-    const [subscriptionsResult, emailAccountsResult, paymentsResult] = await Promise.all([
-      supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date_added', { ascending: false }),
-      supabase.from('email_accounts').select('*').eq('user_id', user.id),
-      supabase
-        .from('payments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
-    ])
-
-    const subscriptions = subscriptionsResult.data?.map(transformSubscription) || []
-    const emailAccounts = emailAccountsResult.data || []
-    const payments = paymentsResult.data || []
-
-    const subscriptionsById = new Map<number, any>(
-      (subscriptionsResult.data || []).map((sub: any) => [sub.id, sub]),
-    )
-
-    const priceHistoryResult = await supabase
-      .from('subscription_price_history')
-      .select('id,subscription_id,old_price,new_price,changed_at')
-      .eq('user_id', user.id)
-      .order('changed_at', { ascending: false })
-
-    if (priceHistoryResult.error) {
-      console.error('Error fetching price change history:', priceHistoryResult.error)
-    }
-
-    const priceChanges = priceHistoryResult.data
-      ? priceHistoryResult.data.map((change: any) =>
-          normalizePriceChange(change, subscriptionsById),
-        )
-      : []
-
-    return {
-      subscriptions,
-      emailAccounts,
-      payments,
-      priceChanges,
-      consolidationSuggestions: [],
-    }
+    user = data?.user ?? null
   } catch (error) {
-    console.error('Error fetching initial data:', error)
+    console.error('[dashboard] supabase client init failed', {
+      component: 'getInitialData',
+      query: 'auth',
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+
+  if (!user) {
     return {
       subscriptions: [],
       emailAccounts: [],
       payments: [],
       priceChanges: [],
       consolidationSuggestions: [],
+      warnings: [],
+      isDemo: true,
     }
+  }
+
+  const [subscriptionsResult, emailAccountsResult, paymentsResult] =
+    await Promise.allSettled([
+      supabase!
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_added', { ascending: false }),
+      supabase!.from('email_accounts').select('*').eq('user_id', user.id),
+      supabase!
+        .from('payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+    ])
+
+  let subscriptions: any[]
+  if (
+    subscriptionsResult.status === 'fulfilled' &&
+    !subscriptionsResult.value.error &&
+    subscriptionsResult.value.data
+  ) {
+    subscriptions = subscriptionsResult.value.data.map(transformSubscription)
+  } else {
+    const reason =
+      subscriptionsResult.status === 'rejected'
+        ? subscriptionsResult.reason
+        : subscriptionsResult.value.error
+    warnings.push(buildQueryWarning('subscriptions', reason))
+    subscriptions = []
+  }
+
+  let emailAccounts: any[]
+  if (
+    emailAccountsResult.status === 'fulfilled' &&
+    !emailAccountsResult.value.error &&
+    emailAccountsResult.value.data
+  ) {
+    emailAccounts = emailAccountsResult.value.data
+  } else {
+    const reason =
+      emailAccountsResult.status === 'rejected'
+        ? emailAccountsResult.reason
+        : emailAccountsResult.value.error
+    warnings.push(buildQueryWarning('email_accounts', reason))
+    emailAccounts = []
+  }
+
+  let payments: any[]
+  if (
+    paymentsResult.status === 'fulfilled' &&
+    !paymentsResult.value.error &&
+    paymentsResult.value.data
+  ) {
+    payments = paymentsResult.value.data
+  } else {
+    const reason =
+      paymentsResult.status === 'rejected'
+        ? paymentsResult.reason
+        : paymentsResult.value.error
+    warnings.push(buildQueryWarning('payments', reason))
+    payments = []
+  }
+
+  const subscriptionsById = new Map<number, any>(
+    subscriptions.map((sub: any) => [sub.id, sub]),
+  )
+
+  const priceHistoryResult = await supabase!
+    .from('subscription_price_history')
+    .select('id,subscription_id,old_price,new_price,changed_at')
+    .eq('user_id', user.id)
+    .order('changed_at', { ascending: false })
+
+  let priceChanges: InitialPriceChange[]
+  if (priceHistoryResult.error) {
+    warnings.push(buildQueryWarning('price_history', priceHistoryResult.error))
+    priceChanges = []
+  } else {
+    priceChanges = (priceHistoryResult.data ?? []).map((change: any) =>
+      normalizePriceChange(change, subscriptionsById),
+    )
+  }
+
+  return {
+    subscriptions,
+    emailAccounts,
+    payments,
+    priceChanges,
+    consolidationSuggestions: [],
+    warnings,
+    isDemo: false,
   }
 }

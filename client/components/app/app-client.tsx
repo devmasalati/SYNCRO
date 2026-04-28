@@ -73,6 +73,8 @@ export function AppClient({
     initialPayments = [],
     initialPriceChanges = [],
     initialConsolidationSuggestions = [],
+    dataLoadWarnings = [],
+    isDemo = false,
 }: AppClientProps) {
     return (
         <UndoProvider>
@@ -82,6 +84,8 @@ export function AppClient({
                 initialPayments={initialPayments}
                 initialPriceChanges={initialPriceChanges}
                 initialConsolidationSuggestions={initialConsolidationSuggestions}
+                dataLoadWarnings={dataLoadWarnings}
+                isDemo={isDemo}
             />
         </UndoProvider>
     );
@@ -93,12 +97,16 @@ function AppContent({
     initialPayments = [],
     initialPriceChanges = [],
     initialConsolidationSuggestions = [],
+    dataLoadWarnings = [],
+    isDemo = false,
 }: {
     initialSubscriptions: DBSubscription[];
     initialEmailAccounts: EmailAccount[];
     initialPayments?: Payment[];
     initialPriceChanges?: PriceChange[];
     initialConsolidationSuggestions?: ConsolidationSuggestion[];
+    dataLoadWarnings?: import('@/lib/dashboard-bootstrap').DataLoadWarning[];
+    isDemo?: boolean;
 }) {
     // Analytics state
     const [analyticsSummary, setAnalyticsSummary] = useState<AnalyticsSummary | undefined>(undefined);
@@ -633,6 +641,30 @@ function AppContent({
                     }
                 }}
             >
+                {dataLoadWarnings.length > 0 && (
+                    <div
+                        role="alert"
+                        aria-live="polite"
+                        className={`mx-4 mt-4 rounded-lg border px-4 py-3 text-sm flex items-start gap-2 ${
+                            darkMode
+                                ? "border-yellow-600 bg-yellow-900/30 text-yellow-300"
+                                : "border-yellow-400 bg-yellow-50 text-yellow-800"
+                        }`}
+                    >
+                        <span className="mt-0.5 shrink-0">⚠️</span>
+                        <div>
+                            <p className="font-medium">Some data could not be loaded</p>
+                            <ul className="mt-1 list-disc list-inside space-y-0.5">
+                                {dataLoadWarnings.map((w) => (
+                                    <li key={w.query}>{w.message}</li>
+                                ))}
+                            </ul>
+                            <p className="mt-1 opacity-75">
+                                Try refreshing the page. If the issue persists, contact support.
+                            </p>
+                        </div>
+                    </div>
+                )}
                 {showInsightsPage ? (
                     <InsightsPage
                         insights={notifications}

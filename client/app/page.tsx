@@ -24,6 +24,8 @@ export default async function HomePage() {
         initialPayments={initialData.payments}
         initialPriceChanges={initialData.priceChanges}
         initialConsolidationSuggestions={initialData.consolidationSuggestions}
+        dataLoadWarnings={initialData.warnings}
+        isDemo={initialData.isDemo}
       />
     </Suspense>
   );
