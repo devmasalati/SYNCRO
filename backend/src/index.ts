@@ -63,6 +63,8 @@ import { scheduleAutoResume } from './jobs/auto-resume';
 import { startCspMonitoringJobs, stopCspMonitoringJobs } from './jobs/csp-monitoring-job';
 import { errorHandler } from './middleware/errorHandler';
 import { swaggerSpec } from './swagger';
+import { telegramCommandService } from './services/telegram-command-service';
+import telegramRoutes from './routes/telegram';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -104,6 +106,11 @@ app.use(express.urlencoded({ extended: true }));
 // Request context and logging
 app.use(requestIdMiddleware);
 app.use(requestLoggerMiddleware);
+
+// Telegram webhook — mounted before CSRF because updates arrive from Telegram servers,
+// not a browser session, so there is no CSRF cookie/header to validate.
+telegramCommandService.init();
+app.use('/api/telegram', telegramRoutes);
 
 // CSRF protection (double-submit cookie) for all mutating API routes
 app.use('/api', csrfProtection);
@@ -311,6 +318,7 @@ const shutdown = () => {
   schedulerService.stop();
   eventListener.stop();
   stopCspMonitoringJobs();
+  telegramCommandService.stop();
   stopIndexer();
   server.close(() => {
     logger.info('Server closed');

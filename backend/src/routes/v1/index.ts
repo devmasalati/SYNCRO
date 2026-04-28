@@ -8,6 +8,7 @@ import digestRoutes from '../digest';
 import pushNotificationsRoutes from '../push-notifications';
 import userRoutes from '../user';
 import integrationRoutes from '../integrations';
+import telegramRoutes from '../telegram';
 
 import { schedulerService } from '../../services/scheduler';
 import { reminderEngine } from '../../services/reminder-engine';
@@ -32,6 +33,9 @@ v1Router.use('/integrations', integrationRoutes);
 
 // Auth alias (some parts of frontend might use /api/v1/auth)
 v1Router.use('/auth', userRoutes);
+
+// Telegram Bot Webhook
+v1Router.use('/telegram', telegramRoutes);
 
 // Reminders Routes
 v1Router.get('/reminders/status', (req: express.Request, res: express.Response) => {
