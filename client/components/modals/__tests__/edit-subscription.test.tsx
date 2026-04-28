@@ -1,12 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { describe, test, it, expect, vi, beforeEach } from 'vitest'
 import EditSubscriptionModal from '../edit-subscription-modal'
 import { mockSubscription } from '@/lib/test-utils'
 
 describe('EditSubscriptionModal', () => {
   const defaultSubscription = mockSubscription({
-    id: 1,
+    id: '1',
     name: 'Netflix',
     price: 15.99,
     billingCycle: 'monthly',
@@ -404,3 +404,5 @@ describe('EditSubscriptionModal', () => {
     })
   })
 })
+
+

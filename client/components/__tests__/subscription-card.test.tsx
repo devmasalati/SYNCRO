@@ -1,13 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { describe, test, it, expect, vi, beforeEach } from 'vitest'
 import { SubscriptionCard } from '../pages/subscriptions'
-import { mockSubscription } from '@/lib/test-utils'
+import { mockSubscription, mockCancellationGuide } from '@/lib/test-utils'
 
 describe('SubscriptionCard', () => {
   const defaultProps = {
     subscription: mockSubscription({
-      id: 1,
+      id: '1',
       name: 'Netflix',
       price: 15.99,
       category: 'Streaming',
@@ -16,7 +16,7 @@ describe('SubscriptionCard', () => {
       icon: '📺',
     }),
     onDelete: vi.fn(),
-    selectedSubscriptions: new Set<number>(),
+    selectedSubscriptions: new Set<string>(),
     onToggleSelect: vi.fn(),
   }
 
@@ -99,10 +99,10 @@ describe('SubscriptionCard', () => {
     })
 
     test('displays cancellation difficulty badge when guide is provided', () => {
-      const guide = {
+      const guide = mockCancellationGuide({
         difficulty: 'hard',
         steps: [],
-      }
+      })
       render(<SubscriptionCard {...defaultProps} guide={guide} />)
 
       expect(screen.getByText(/hard to cancel/i)).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('SubscriptionCard', () => {
       const deleteButton = screen.getByLabelText(/Delete Netflix/i)
       await user.click(deleteButton)
 
-      expect(defaultProps.onDelete).toHaveBeenCalledWith(1)
+      expect(defaultProps.onDelete).toHaveBeenCalledWith('1')
     })
 
     test('calls onManage when edit button is clicked', async () => {
@@ -138,11 +138,11 @@ describe('SubscriptionCard', () => {
       const checkbox = screen.getByLabelText(/Select Netflix/i)
       await user.click(checkbox)
 
-      expect(defaultProps.onToggleSelect).toHaveBeenCalledWith(1)
+      expect(defaultProps.onToggleSelect).toHaveBeenCalledWith('1')
     })
 
     test('checkbox reflects selected state', () => {
-      const selectedSet = new Set([1])
+      const selectedSet = new Set(['1'])
       render(<SubscriptionCard {...defaultProps} selectedSubscriptions={selectedSet} />)
 
       const checkbox = screen.getByLabelText(/Select Netflix/i) as HTMLInputElement
@@ -274,3 +274,4 @@ describe('SubscriptionCard', () => {
     })
   })
 })
+

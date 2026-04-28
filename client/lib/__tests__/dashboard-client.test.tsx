@@ -54,3 +54,4 @@ describe("DashboardClient", () => {
     expect(screen.getByText(/Team Members/i).parentElement).toHaveTextContent(/Error/i)
   })
 })
+

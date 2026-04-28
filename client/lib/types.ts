@@ -1,20 +1,8 @@
-
-
 export type BillingCycle = "monthly" | "yearly" | "quarterly";
 
-export type Difficulty = "easy" | "medium" | "hard";
+import { type CancellationGuide } from "@/lib/supabase/cancellation-guides";
 
-export interface CancellationGuide {
-  id: string;
-  serviceName: string;
-  difficulty: Difficulty;
-  directUrl: string;
-  steps: string[];
-  estimatedTime: string;
-  warningNote?: string;
-  chatSupportLink?: string;
-  phoneNumber?: string;
-}
+export type Difficulty = "easy" | "medium" | "hard";
 
 export type SubscriptionStatus = 'active' | 'cancelled' | 'paused' | 'trial' | 'expired';
 
@@ -37,6 +25,19 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
   cancellationGuide?: CancellationGuide;
+  /** UI specific / Computed fields */
+  icon?: string;
+  renewsIn?: number;
+  email?: string;
+  isTrial?: boolean;
+  trialEndsAt?: string;
+  priceAfterTrial?: number;
+  latest_price_change?: {
+    old_price: number;
+    new_price: number;
+    changed_at: string;
+  };
+  toggleVisibility?: boolean;
 }
 
 export interface SubscriptionHistoryEntry {

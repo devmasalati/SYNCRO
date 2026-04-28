@@ -18,22 +18,22 @@ import { KeyboardHelpModal } from "@/components/modals/keyboard-help-modal"
 
 interface SubscriptionsPageProps {
   subscriptions?: any[]
-  onDelete: (id: number) => void
+  onDelete: (id: string) => void
   maxSubscriptions: number
   currentPlan: string
   darkMode?: boolean
   onManage: (subscription: any) => void
   onRenew: (subscription: any) => void
-  selectedSubscriptions: Set<number>
-  onToggleSelect: (id: number) => void
+  selectedSubscriptions: Set<string>
+  onToggleSelect: (id: string) => void
   emailAccounts?: any[]
   duplicates?: any[]
   unusedSubscriptions?: any[]
   onImportComplete?: () => void
   onPause?: (subscription: any) => void
   onResume?: (subscription: any) => void
-  onCancelTrial?: (id: number) => void
-  onConvertTrial?: (id: number) => void
+  onCancelTrial?: (id: string) => void
+  onConvertTrial?: (id: string) => void
 }
 
 export default function SubscriptionsPage({
@@ -694,10 +694,10 @@ export default function SubscriptionsPage({
 
 interface SubscriptionCardProps {
   subscription: any
-  onDelete: (id: number) => void
+  onDelete: (id: string) => void
   onManage?: (subscription: any) => void
-  selectedSubscriptions: Set<number>
-  onToggleSelect: (id: number) => void
+  selectedSubscriptions: Set<string>
+  onToggleSelect: (id: string) => void
   darkMode?: boolean
   isDuplicate?: boolean
   unusedInfo?: any
@@ -705,8 +705,8 @@ interface SubscriptionCardProps {
   guide?: CancellationGuide
   onPause?: (subscription: any) => void
   onResume?: (subscription: any) => void
-  onCancelTrial?: (id: number) => void
-  onConvertTrial?: (id: number) => void
+  onCancelTrial?: (id: string) => void
+  onConvertTrial?: (id: string) => void
 }
 
 export function SubscriptionCard({
@@ -957,3 +957,4 @@ function BrokenCardPlaceholder({ name, darkMode }: { name?: string; darkMode?: b
     </div>
   )
 }
+

@@ -17,6 +17,8 @@ import type {
   MFAStatus
 } from '@/lib/types';
 
+import { type CancellationGuide } from '@/lib/supabase/cancellation-guides';
+
 // Simple UUID generator for tests
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -245,5 +247,20 @@ export const mockWebhookEvent = (overrides?: Partial<MockWebhookEvent>): MockWeb
     },
   },
   created: Math.floor(Date.now() / 1000),
+  ...overrides,
+});
+
+/**
+ * Mock cancellation guide for testing
+ */
+export const mockCancellationGuide = (overrides?: Partial<CancellationGuide>): CancellationGuide => ({
+  id: generateId(),
+  service_name: randomCompanyName(),
+  difficulty: 'medium',
+  direct_url: 'https://example.com/cancel',
+  steps: ['Log in', 'Go to settings', 'Click cancel'],
+  estimated_time: '5 mins',
+  created_at: randomDate(30),
+  updated_at: randomDate(7),
   ...overrides,
 });

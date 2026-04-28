@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { describe, test, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock component for delete confirmation modal
 // Since it's embedded in manage-subscription-modal, we'll create a standalone version for testing
@@ -350,3 +350,5 @@ describe('DeleteConfirmationModal', () => {
     })
   })
 })
+
+

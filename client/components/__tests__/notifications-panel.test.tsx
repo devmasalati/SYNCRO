@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { describe, test, it, expect, vi, beforeEach } from 'vitest'
 import NotificationsPanel from '../notifications-panel'
 import { mockNotification } from '@/lib/test-utils'
 
@@ -8,14 +8,14 @@ describe('NotificationsPanel', () => {
   const defaultProps = {
     notifications: [
       mockNotification({
-        id: 1,
+        id: '1',
         title: 'Trial Ending Soon',
         description: 'Your Netflix trial ends in 3 days',
         type: 'trial',
         read: false,
       }),
       mockNotification({
-        id: 2,
+        id: '2',
         title: 'Price Increase',
         description: 'Spotify increased to $12.99/month',
         type: 'price_change',
@@ -64,14 +64,14 @@ describe('NotificationsPanel', () => {
 
     test('displays notification icons based on type', () => {
       const notifications = [
-        mockNotification({ id: 1, type: 'duplicate', title: 'Duplicate', description: 'Test' }),
-        mockNotification({ id: 2, type: 'unused', title: 'Unused', description: 'Test' }),
-        mockNotification({ id: 3, type: 'trial', title: 'Trial', description: 'Test' }),
-        mockNotification({ id: 4, type: 'price_change', title: 'Price', description: 'Test' }),
-        mockNotification({ id: 5, type: 'renewal', title: 'Renewal', description: 'Test' }),
-        mockNotification({ id: 6, type: 'budget', title: 'Budget', description: 'Test' }),
-        mockNotification({ id: 7, type: 'consolidation', title: 'Consolidation', description: 'Test' }),
-        mockNotification({ id: 8, type: 'alert', title: 'Alert', description: 'Test' }),
+        mockNotification({ id: '1', type: 'duplicate', title: 'Duplicate', description: 'Test' }),
+        mockNotification({ id: '2', type: 'unused', title: 'Unused', description: 'Test' }),
+        mockNotification({ id: '3', type: 'trial', title: 'Trial', description: 'Test' }),
+        mockNotification({ id: '4', type: 'price_change', title: 'Price', description: 'Test' }),
+        mockNotification({ id: '5', type: 'renewal', title: 'Renewal', description: 'Test' }),
+        mockNotification({ id: '6', type: 'budget', title: 'Budget', description: 'Test' }),
+        mockNotification({ id: '7', type: 'consolidation', title: 'Consolidation', description: 'Test' }),
+        mockNotification({ id: '8', type: 'alert', title: 'Alert', description: 'Test' }),
       ]
 
       render(<NotificationsPanel {...defaultProps} notifications={notifications} />)
@@ -120,7 +120,7 @@ describe('NotificationsPanel', () => {
       const markReadButton = screen.getByLabelText(/Mark "Trial Ending Soon" as read/i)
       await user.click(markReadButton)
 
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(1)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('1')
     })
 
     test('calls onMarkRead for all notifications when "Mark all as read" is clicked', async () => {
@@ -131,15 +131,15 @@ describe('NotificationsPanel', () => {
       await user.click(markAllButton)
 
       expect(defaultProps.onMarkRead).toHaveBeenCalledTimes(2)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(1)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(2)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('1')
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('2')
     })
 
     test('calls onAddSubscription when "Add to Dashboard" is clicked for alert notification', async () => {
       const user = userEvent.setup()
       const detectedSubscription = { name: 'Hulu', price: 7.99 }
       const alertNotification = mockNotification({
-        id: 3,
+        id: '3',
         type: 'alert',
         title: 'New Subscription Detected',
         description: 'We found Hulu',
@@ -157,14 +157,14 @@ describe('NotificationsPanel', () => {
       await user.click(addButton)
 
       expect(defaultProps.onAddSubscription).toHaveBeenCalledWith(detectedSubscription)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(3)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('3')
     })
 
     test('calls onResolveAction for duplicate notification', async () => {
       const user = userEvent.setup()
       const duplicateInfo = { subscriptionIds: [1, 2] }
       const duplicateNotification = mockNotification({
-        id: 4,
+        id: '4',
         type: 'duplicate',
         title: 'Duplicate Found',
         description: 'You have duplicate subscriptions',
@@ -182,17 +182,17 @@ describe('NotificationsPanel', () => {
       await user.click(resolveButton)
 
       expect(defaultProps.onResolveAction).toHaveBeenCalledWith('resolve_duplicate', duplicateInfo)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(4)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('4')
     })
 
     test('calls onResolveAction for unused notification', async () => {
       const user = userEvent.setup()
       const unusedNotification = mockNotification({
-        id: 5,
+        id: '5',
         type: 'unused',
         title: 'Unused Subscription',
         description: 'You haven\'t used this in 60 days',
-        subscriptionId: 123,
+        subscriptionid: '123',
       })
 
       render(
@@ -206,17 +206,17 @@ describe('NotificationsPanel', () => {
       await user.click(cancelButton)
 
       expect(defaultProps.onResolveAction).toHaveBeenCalledWith('cancel_unused', 123)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(5)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('5')
     })
 
     test('calls onResolveAction for trial notification', async () => {
       const user = userEvent.setup()
       const trialNotification = mockNotification({
-        id: 6,
+        id: '6',
         type: 'trial',
         title: 'Trial Ending',
         description: 'Cancel before you get charged',
-        subscriptionId: 456,
+        subscriptionid: '456',
       })
 
       render(
@@ -230,17 +230,17 @@ describe('NotificationsPanel', () => {
       await user.click(cancelButton)
 
       expect(defaultProps.onResolveAction).toHaveBeenCalledWith('cancel_trial', 456)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(6)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('6')
     })
 
     test('calls onResolveAction for consolidation notification', async () => {
       const user = userEvent.setup()
       const consolidationNotification = mockNotification({
-        id: 7,
+        id: '7',
         type: 'consolidation',
         title: 'Consolidation Opportunity',
         description: 'Save money by bundling',
-        suggestionId: 789,
+        suggestionid: '789',
       })
 
       render(
@@ -254,7 +254,7 @@ describe('NotificationsPanel', () => {
       await user.click(viewButton)
 
       expect(defaultProps.onResolveAction).toHaveBeenCalledWith('view_consolidation', 789)
-      expect(defaultProps.onMarkRead).toHaveBeenCalledWith(7)
+      expect(defaultProps.onMarkRead).toHaveBeenCalledWith('7')
     })
   })
 
@@ -335,3 +335,5 @@ describe('NotificationsPanel', () => {
     })
   })
 })
+
+
