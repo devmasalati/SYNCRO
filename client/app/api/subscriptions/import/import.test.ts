@@ -22,8 +22,8 @@ vi.mock("@/lib/supabase/server", () => ({
 function createFormDataRequest(fields: Record<string, any>, fileContent?: string) {
   const formData = new FormData()
   Object.entries(fields).forEach(([k, v]) => {
-    if (k === 'file' && fileContent) {
-      const blob = new Blob([fileContent], { type: 'text/csv' })
+    if (k === 'file') {
+      const blob = new Blob([fileContent ?? ""], { type: 'text/csv' })
       formData.append(k, blob, 'test.csv')
     } else {
       formData.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v))

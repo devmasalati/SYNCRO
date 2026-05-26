@@ -119,11 +119,13 @@ export async function POST(request: NextRequest) {
 
     // Parse multipart form
     const formData = await request.formData()
-    const file = formData.get("file") as File | null
-    if (!file) {
-      return NextResponse.json({ success: false, error: "No CSV file uploaded" }, { status: 400 })
+    const file = formData.get("file")
+    
+    if (!file || typeof file === "string") {
+      return NextResponse.json({ success: false, error: "Please upload a valid CSV file." }, { status: 400 })
     }
-    if (!file.name.endsWith(".csv")) {
+    
+    if (!file.name || !file.name.endsWith(".csv")) {
       return NextResponse.json({ success: false, error: "Only CSV files are accepted" }, { status: 400 })
     }
 
