@@ -53,6 +53,18 @@ describe("Subscriptions API Route", () => {
       expect(supabase.eq).toHaveBeenCalledWith("user_id", "user_123")
     })
 
+    it("should return 401 for unauthenticated requests", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(null as any)
+
+      const request = new NextRequest("http://localhost/api/subscriptions")
+      const response = await GET(request)
+      const body = await response.json()
+
+      expect(response.status).toBe(401)
+      expect(body.success).toBe(false)
+      expect(body.error.code).toBe("UNAUTHORIZED")
+    })
+
     it("should handle database errors", async () => {
       supabase.from.mockReturnThis()
       supabase.select.mockReturnThis()
@@ -106,6 +118,29 @@ describe("Subscriptions API Route", () => {
           name: "Disney+",
         })
       )
+    })
+
+    it("should return 401 for unauthenticated requests", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(null as any)
+
+      const newSub = {
+        name: "Disney+",
+        category: "Entertainment",
+        price: 7.99,
+        status: "active",
+      }
+
+      const request = new NextRequest("http://localhost/api/subscriptions", {
+        method: "POST",
+        body: JSON.stringify(newSub),
+      })
+
+      const response = await POST(request)
+      const body = await response.json()
+
+      expect(response.status).toBe(401)
+      expect(body.success).toBe(false)
+      expect(body.error.code).toBe("UNAUTHORIZED")
     })
 
     it("should validate the request body", async () => {

@@ -12,7 +12,7 @@ export async function POST(
 
   return createApiRoute(
     async (req: NextRequest, context, user) => {
-      if (!user) throw new Error("User not authenticated")
+      if (!user) throw ApiErrors.unauthorized("User not authenticated")
       if (!id) throw ApiErrors.notFound("Subscription")
 
       const supabase = await createClient()
@@ -43,7 +43,7 @@ export async function POST(
         .select()
         .single()
 
-      if (error) throw new Error(`Failed to resume subscription: ${error.message}`)
+      if (error) throw ApiErrors.internalError(`Failed to resume subscription: ${error.message}`)
 
       return createSuccessResponse({ subscription: data }, HttpStatus.OK, context.requestId)
     },

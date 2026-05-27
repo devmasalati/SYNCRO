@@ -241,6 +241,8 @@ All API responses follow a standard format:
 4. **Check ownership** for resource operations
 5. **Use typed responses** with TypeScript
 6. **Handle errors gracefully** - let the infrastructure handle formatting
+7. **Never throw generic `Error` objects** - always use `ApiErrors` for proper HTTP status codes and to avoid exposing stack traces
+8. **Use `ApiErrors.unauthorized()` for auth failures** instead of generic errors
 
 ## Testing
 

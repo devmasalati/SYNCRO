@@ -9,7 +9,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { z } from "zod"
-import { RateLimiters, createErrorResponse, validateCsrfToken } from "@/lib/api/index"
+import { ApiErrors, RateLimiters, createErrorResponse, validateCsrfToken } from "@/lib/api/index"
 import { ApiException } from "@/lib/api/errors"
 import { applyRateLimitHeaders, type RateLimitHeaders } from "@/lib/api/rate-limit"
 
@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
 
     if (toInsert.length > 0) {
       const { error } = await supabase.from("subscriptions").insert(toInsert)
-      if (error) throw new Error(`Import failed: ${error.message}`)
+      if (error) throw ApiErrors.internalError(`Import failed: ${error.message}`)
     }
 
     const result = {

@@ -1,12 +1,12 @@
 import { type NextRequest } from "next/server"
 import { HttpStatus } from "@/lib/api/types"
 import { createClient } from "@/lib/supabase/server"
-import { createApiRoute, createSuccessResponse, RateLimiters } from "@/lib/api/index"
+import { createApiRoute, createSuccessResponse, RateLimiters, ApiErrors } from "@/lib/api/index"
 
 export const GET = createApiRoute(
   async (request: NextRequest, context, user) => {
     if (!user) {
-      throw new Error("User not authenticated")
+      throw ApiErrors.unauthorized("User not authenticated")
     }
 
     const supabase = await createClient()
@@ -18,7 +18,7 @@ export const GET = createApiRoute(
       .eq("status", "active")
 
     if (error) {
-      throw new Error(`Failed to fetch analytics: ${error.message}`)
+      throw ApiErrors.internalError(`Failed to fetch analytics: ${error.message}`)
     }
 
     const totalSpend =

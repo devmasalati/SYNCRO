@@ -23,7 +23,7 @@ const getSubscriptionsSchema = CommonSchemas.pagination.extend({
 export const GET = createApiRoute(
   async (request: NextRequest, context, user) => {
     if (!user) {
-      throw new Error("User not authenticated")
+      throw ApiErrors.unauthorized("User not authenticated")
     }
 
     // Validate query parameters
@@ -59,7 +59,7 @@ export const GET = createApiRoute(
     const { data, error, count } = await queryBuilder
 
     if (error) {
-      throw new Error(`Failed to fetch subscriptions: ${error.message}`)
+      throw ApiErrors.internalError(`Failed to fetch subscriptions: ${error.message}`)
     }
 
     const total = count || 0
@@ -90,7 +90,7 @@ export const GET = createApiRoute(
 export const POST = createApiRoute(
   async (request: NextRequest, context, user) => {
     if (!user) {
-      throw new Error("User not authenticated")
+      throw ApiErrors.unauthorized("User not authenticated")
     }
 
     // Validate request body
@@ -112,7 +112,7 @@ export const POST = createApiRoute(
       .single()
 
     if (error) {
-      throw new Error(`Failed to create subscription: ${error.message}`)
+      throw ApiErrors.internalError(`Failed to create subscription: ${error.message}`)
     }
 
     return createSuccessResponse(

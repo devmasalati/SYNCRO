@@ -28,7 +28,7 @@ export async function DELETE(
   return createApiRoute(
     async (req: NextRequest, context, user) => {
       if (!user) {
-        throw new Error("User not authenticated")
+        throw ApiErrors.unauthorized("User not authenticated")
       }
 
       if (!id) {
@@ -58,7 +58,7 @@ export async function DELETE(
         .eq("user_id", user.id)
 
       if (error) {
-        throw new Error(`Failed to delete subscription: ${error.message}`)
+        throw ApiErrors.internalError(`Failed to delete subscription: ${error.message}`)
       }
 
       return createSuccessResponse(
@@ -83,7 +83,7 @@ export async function PATCH(
   return createApiRoute(
     async (req: NextRequest, context, user) => {
       if (!user) {
-        throw new Error("User not authenticated")
+        throw ApiErrors.unauthorized("User not authenticated")
       }
 
       if (!id) {
@@ -127,7 +127,7 @@ export async function PATCH(
         .single()
 
       if (error) {
-        throw new Error(`Failed to update subscription: ${error.message}`)
+        throw ApiErrors.internalError(`Failed to update subscription: ${error.message}`)
       }
 
       return createSuccessResponse(

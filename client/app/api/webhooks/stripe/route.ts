@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/server"
 import { getStripeInstance } from "@/lib/stripe-config"
+import { ApiErrors } from "@/lib/api/index"
 
 export async function POST(request: NextRequest) {
   const stripe = getStripeInstance()
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
 
   try {
     if (!signature || !webhookSecret) {
-      throw new Error("Missing stripe-signature or webhook secret")
+      throw ApiErrors.validationError("Missing stripe-signature or webhook secret")
     }
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err) {
