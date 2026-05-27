@@ -538,6 +538,8 @@ export default function SubscriptionsPage({
                     darkMode={darkMode}
                     isDuplicate={duplicates.some((dup: any) => dup.subscriptions.some((s: any) => s.id === sub.id))}
                     unusedInfo={unusedSubscriptions.find((unused: any) => unused.id === sub.id)}
+                    onCancel={(s) => setSelectedSubForCancel(s)}
+                    guide={guides.find((g) => g.service_name.toLowerCase() === sub.name.toLowerCase())}
                     onPause={onPause}
                     onResume={onResume}
                     onCancelTrial={onCancelTrial}

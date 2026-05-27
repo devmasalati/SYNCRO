@@ -318,3 +318,18 @@ export function logTeamAction(
     details,
   })
 }
+
+export function logCancellationGuideAction(
+  userId: string,
+  action: "guide_opened" | "direct_url_clicked",
+  serviceName: string,
+  details?: Record<string, any>,
+): void {
+  auditLogger.log({
+    userId,
+    action,
+    resource: "cancellation_guide",
+    resourceId: serviceName,
+    details,
+  })
+}
