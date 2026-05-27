@@ -10,10 +10,10 @@ import { z } from 'zod'
  * Uses partial() to allow missing optional vars, but validates required ones
  */
 const envSchema = z.object({
-  // Supabase (required)
+  // Supabase — anon key only; service-role key intentionally excluded from client
+  // to prevent accidental privilege escalation. Backend uses SERVICE_ROLE_KEY directly.
   NEXT_PUBLIC_SUPABASE_URL: z.string().url('Invalid Supabase URL').optional(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'Supabase anon key required').optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'Supabase service role key required').optional(),
 
   // API Configuration
   NEXT_PUBLIC_API_BASE: z.string().url('Invalid API base URL').optional(),
@@ -62,7 +62,6 @@ export function getEnv(): Env {
     validatedEnv = envSchema.parse({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       NEXT_PUBLIC_API_BASE: process.env.NEXT_PUBLIC_API_BASE,
       API_SECRET_KEY: process.env.API_SECRET_KEY,
       RATE_LIMIT_ENABLED: process.env.RATE_LIMIT_ENABLED,

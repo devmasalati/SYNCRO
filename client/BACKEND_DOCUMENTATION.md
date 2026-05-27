@@ -166,7 +166,6 @@ All tables are defined with Row Level Security (RLS) policies:
 \`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 \`\`\`
 
 #### 1.2 Execute Database Migrations
@@ -1178,7 +1177,6 @@ STRIPE_WEBHOOK_SECRET=whsec_...
    # Supabase
    NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
-   SUPABASE_SERVICE_ROLE_KEY=eyJxxx...
    
    # Stripe (if using payments)
    STRIPE_SECRET_KEY=sk_live_xxx
@@ -1248,7 +1246,6 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 # Required
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
 
 # Stripe (if using payments)
 STRIPE_SECRET_KEY=

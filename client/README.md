@@ -92,10 +92,9 @@ npm install
 Create a `.env.local` file:
 
 ```bash
-# Supabase
+# Supabase (anon key only — service-role key is reserved for the backend)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
