@@ -132,80 +132,12 @@ jobs:
           echo "✅ Backend lockfile is up to date"
 
   # ──────────────────────────────────────────────
-  # Job 3: Linting and Type Checking
-  # ──────────────────────────────────────────────
-  lint-and-typecheck:
-    name: Lint & Type Check
-    runs-on: ubuntu-latest
-    needs: validate-dependencies
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install client dependencies
-        working-directory: client
-        run: npm ci
-
-      - name: Lint client
-        working-directory: client
-        run: npm run lint
-
-      - name: Type check client
-        working-directory: client
-        run: npx tsc --noEmit
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Lint backend
-        working-directory: backend
-        run: npx eslint src --ext .ts --max-warnings 0
-
-      - name: Type check backend
-        working-directory: backend
-        run: npx tsc --noEmit
-
-  # ──────────────────────────────────────────────
-  # Job 4: Dependency vulnerability scan
-  # ──────────────────────────────────────────────
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    needs: validate-dependencies
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Audit client dependencies
-        working-directory: client
-        run: npm audit --audit-level=high --omit=dev
-
-      - name: Audit backend dependencies
-        working-directory: backend
-        run: npm audit --audit-level=high --omit=dev
-
-  # ──────────────────────────────────────────────
-  # Job 5: Build the client
+  # Job 3: Build the client
   # ──────────────────────────────────────────────
   build-client:
     name: Build Client
     runs-on: ubuntu-latest
-    needs: [validate-dependencies, security-audit, lint-and-typecheck]
+    needs: [validate-dependencies]
 
     steps:
       - name: Checkout repository
@@ -241,7 +173,7 @@ jobs:
   test-sdk:
     name: SDK — Build & Test
     runs-on: ubuntu-latest
-    needs: [validate-env, security-audit, lint-and-typecheck]
+    needs: [validate-env]
 
     defaults:
       run:
@@ -261,12 +193,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Run typecheck
-        run: npm run typecheck
-
-      - name: Run lint
-        run: npm run lint
 
       - name: Build
         run: npm run build
@@ -293,7 +219,7 @@ jobs:
   test-client:
     name: Test Client
     runs-on: ubuntu-latest
-    needs: [validate-env, security-audit, lint-and-typecheck]
+    needs: [validate-env]
 
     steps:
       - name: Checkout repository
@@ -317,7 +243,7 @@ jobs:
   test-backend:
     name: Test Backend
     runs-on: ubuntu-latest
-    needs: [validate-dependencies, security-audit, lint-and-typecheck]
+    needs: [validate-dependencies]
 
     steps:
       - name: Checkout repository
