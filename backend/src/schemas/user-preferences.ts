@@ -28,6 +28,9 @@ export const userPreferencesUpdateSchema = z.object({
   risk_notification_threshold: z
     .enum(['LOW', 'MEDIUM', 'HIGH'])
     .optional(),
+  currency: z.string().min(3).max(5).optional(),
+  timezone: z.string().optional(),
+  locale: z.string().optional(),
 });
 
 // ─── Quiet Hours Schema ─────────────────────────────────────────────────────

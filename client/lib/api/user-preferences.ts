@@ -19,6 +19,9 @@ export interface UserPreferences {
   quiet_hours_end: string
   quiet_hours_timezone: string
   critical_alerts_only: boolean
+  currency: string
+  timezone: string
+  locale: string
   updated_at: string
 }
 
@@ -40,6 +43,9 @@ export interface UserPreferencesUpdateInput {
   quiet_hours_end?: string
   quiet_hours_timezone?: string
   critical_alerts_only?: boolean
+  currency?: string
+  timezone?: string
+  locale?: string
 }
 
 export interface QuietHoursUpdateInput {

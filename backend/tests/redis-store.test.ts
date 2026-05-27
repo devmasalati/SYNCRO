@@ -25,6 +25,7 @@ describe('RateLimitRedisStore', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (RateLimitRedisStore as any).instance = undefined;
     
     mockRedisClient = {
       connect: jest.fn().mockResolvedValue(undefined),
@@ -75,22 +76,16 @@ describe('RateLimitRedisStore', () => {
     });
 
     it('should skip initialization when Redis is disabled', async () => {
-      // Mock disabled Redis config
-      jest.doMock('../src/config/rate-limit', () => ({
-        rateLimitConfig: {
-          redis: {
-            enabled: false,
-            url: null,
-          },
-        },
-      }));
+      const { rateLimitConfig } = require('../src/config/rate-limit');
+      const originalEnabled = rateLimitConfig.redis.enabled;
+      rateLimitConfig.redis.enabled = false;
 
-      const { RateLimitRedisStore: DisabledStore } = await import('../src/lib/redis-store');
-      const store = DisabledStore.getInstance();
-
+      const store = RateLimitRedisStore.getInstance();
       await store.initialize();
 
       expect(mockCreateClient).not.toHaveBeenCalled();
+      
+      rateLimitConfig.redis.enabled = originalEnabled;
     });
   });
 

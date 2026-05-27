@@ -5,6 +5,7 @@ import { authenticate, AuthenticatedRequest, requireScope } from '../middleware/
 import { validate } from '../middleware/validate';
 import logger from '../config/logger';
 import { createApiKeySchema } from '../schemas/api-key';
+import { NotFoundError } from '../errors';
 
 const router: Router = Router();
 

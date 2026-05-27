@@ -17,6 +17,8 @@ import { AnalyticsSummary } from "@/lib/api/analytics"
 import { Download, Calendar, BarChart3, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react"
 import { downloadSubscriptionPDF } from "@/lib/pdf-report"
 import { Progress } from "@/components/ui/progress"
+import { formatCurrency } from "@/lib/currency-utils"
+import { useUserSettings } from "@/components/providers/user-settings-provider"
 
 interface AnalyticsPageProps {
   summary: AnalyticsSummary
@@ -26,6 +28,8 @@ interface AnalyticsPageProps {
 }
 
 export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 0 }: AnalyticsPageProps) {
+  const { settings } = useUserSettings()
+  const currency = settings.currency
   const [view, setView] = useState("default")
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -36,7 +40,7 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
     const headers = ["Name", "Monthly Price", "Cycle"]
     const rows = summary.top_subscriptions.map((sub) => [
       sub.name,
-      `$${sub.monthly_normalized_price.toFixed(2)}`,
+      formatCurrency(sub.monthly_normalized_price, currency),
       sub.billing_cycle,
     ])
 
@@ -56,7 +60,7 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
         <div className={`p-6 rounded-xl border ${darkMode ? "bg-[#2D3748] border-[#374151]" : "bg-white border-gray-200"}`}>
           <p className="text-sm text-gray-400 mb-1">Total Monthly Spend</p>
           <p className={`text-3xl font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-            ${summary.total_monthly_spend.toFixed(2)}
+            {formatCurrency(summary.total_monthly_spend, currency)}
           </p>
         </div>
         <div className={`p-6 rounded-xl border ${darkMode ? "bg-[#2D3748] border-[#374151]" : "bg-white border-gray-200"}`}>
@@ -79,7 +83,7 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
           <div className="flex justify-between items-center mb-4">
             <h3 className={`font-semibold ${darkMode ? "text-white" : "text-gray-900"}`}>Monthly Budget</h3>
             <span className={darkMode ? "text-gray-400" : "text-gray-600"}>
-              ${summary.budget_status.current_spend.toFixed(2)} / ${summary.budget_status.overall_limit.toFixed(2)}
+              {formatCurrency(summary.budget_status.current_spend, currency)} / {formatCurrency(summary.budget_status.overall_limit, currency)}
             </span>
           </div>
           <Progress value={summary.budget_status.percentage} className="h-2" />
@@ -99,6 +103,7 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
               <XAxis dataKey="month" stroke={darkMode ? "#9ca3af" : "#9ca3af"} />
               <YAxis stroke={darkMode ? "#9ca3af" : "#9ca3af"} />
               <Tooltip
+                formatter={(value) => formatCurrency(Number(value), currency)}
                 contentStyle={{ backgroundColor: darkMode ? "#1F2937" : "#FFF", border: "none", borderRadius: "8px" }}
                 itemStyle={{ color: "#6366F1" }}
               />
@@ -125,14 +130,14 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => `$${Number(value).toFixed(2)}`} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value), currency)} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 gap-2">
             {summary.category_breakdown.map((cat, idx) => (
               <div key={idx} className="flex items-center gap-2 text-sm">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                <span className="text-gray-400">{cat.category}: ${cat.total_spend.toFixed(0)}</span>
+                <span className="text-gray-400">{cat.category}: {formatCurrency(cat.total_spend, currency)}</span>
               </div>
             ))}
           </div>
@@ -166,7 +171,7 @@ export default function AnalyticsPage({ summary, darkMode, savedBySyncroCount = 
               </div>
               <div className="text-right">
                 <p className={`font-bold ${darkMode ? "text-white" : "text-gray-900"}`}>
-                  ${sub.monthly_normalized_price.toFixed(2)}
+                  {formatCurrency(sub.monthly_normalized_price, currency)}
                 </p>
                 <p className="text-xs text-green-600">Active</p>
               </div>

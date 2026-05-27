@@ -15,6 +15,9 @@ import { fetchAllCancellationGuides, type CancellationGuide } from "@/lib/supaba
 import { StatusBadge, normalizeStatus } from "@/components/ui/status-badge"
 import { AdvancedFilterBar, type FilterState, EMPTY_FILTERS, hasActiveFilters } from "@/components/ui/advanced-filter-bar"
 import { KeyboardHelpModal } from "@/components/modals/keyboard-help-modal"
+import { useUserSettings } from "@/components/providers/user-settings-provider"
+import { formatCurrency } from "@/lib/currency-utils"
+import { formatDate, getDaysDifference } from "@/lib/timezone-utils"
 
 interface SubscriptionsPageProps {
   subscriptions?: any[]
@@ -55,6 +58,8 @@ export default function SubscriptionsPage({
   onCancelTrial,
   onConvertTrial,
 }: SubscriptionsPageProps) {
+  const { settings } = useUserSettings()
+  const currency = settings.currency
   const [searchTerm, setSearchTerm] = useState("")
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
   const [isSearching, setIsSearching] = useState(false)
@@ -473,7 +478,7 @@ export default function SubscriptionsPage({
           </h3>
           <div className="space-y-3">
             {activeTrials.map((sub: any) => {
-              const daysLeft = Math.ceil((new Date(sub.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+              const daysLeft = getDaysDifference(sub.trialEndsAt)
               const urgencyColor = daysLeft <= 1 ? "text-red-600" : daysLeft <= 3 ? "text-orange-500" : "text-yellow-600"
               const urgencyBg = daysLeft <= 1 ? (darkMode ? "bg-red-900/20 border-red-700" : "bg-red-50 border-red-200") : daysLeft <= 3 ? (darkMode ? "bg-orange-900/20 border-orange-700" : "bg-orange-50 border-orange-200") : (darkMode ? "bg-yellow-900/20 border-yellow-700" : "bg-yellow-50 border-yellow-200")
               return (
@@ -840,8 +845,7 @@ export function SubscriptionCard({
           </div>
           {sub.isTrial && sub.trialEndsAt && (
             <p className={`text-xs ${darkMode ? "text-[#007A5C]" : "text-green-600"} mt-1`}>
-              Trial ends in {Math.ceil((new Date(sub.trialEndsAt).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days - $
-              {sub.priceAfterTrial}/month after
+              Trial ends in {getDaysDifference(sub.trialEndsAt)} days - {formatCurrency(sub.priceAfterTrial || 0, currency)}/month after
             </p>
           )}
         </div>

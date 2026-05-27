@@ -250,15 +250,15 @@ export class TelegramBotService {
     if (reminderType === 'trial_expiry') {
       const emoji = daysBefore === 0 ? '🚨' : daysBefore <= 1 ? '⚠️' : '📅';
       const urgency = daysBefore === 0 ? 'TODAY' : `in ${daysBefore} day${daysBefore > 1 ? 's' : ''}`;
-      const convertPrice = subscription.trial_converts_to_price ?? subscription.price;
+      const convertPrice = subscription.trial_converts_to_price ?? subscription.price ?? 0;
 
       let message = `${emoji} <b>Trial Ending ${urgency}</b>\n\n`;
-      message += `<b>${subscription.name}</b>\n`;
+      message += `<b>${subscription.name || 'Subscription'}</b>\n`;
       message += `📦 Category: ${subscription.category || 'N/A'}\n`;
       message += `📅 Trial ends: ${renewalDateFormatted}\n\n`;
 
       if (subscription.credit_card_required) {
-        message += `⚠️ <b>Action Required:</b> You'll be charged <b>$${convertPrice.toFixed(2)}/${subscription.billing_cycle}</b> if you don't cancel.\n`;
+        message += `⚠️ <b>Action Required:</b> You'll be charged <b>$${Number(convertPrice).toFixed(2)}/${subscription.billing_cycle || 'period'}</b> if you don't cancel.\n`;
       } else {
         message += `ℹ️ No credit card on file. Your access will end if you don't upgrade.\n`;
       }
@@ -271,9 +271,9 @@ export class TelegramBotService {
     const timeframe = daysBefore === 0 ? 'TODAY' : `in ${daysBefore} day${daysBefore > 1 ? 's' : ''}`;
 
     let message = `${emoji} <b>Subscription Renewal ${timeframe}</b>\n\n`;
-    message += `<b>${subscription.name}</b>\n`;
+    message += `<b>${subscription.name || 'Subscription'}</b>\n`;
     message += `📦 Category: ${subscription.category || 'N/A'}\n`;
-    message += `💰 Price: $${subscription.price.toFixed(2)}/${subscription.billing_cycle}\n`;
+    message += `💰 Price: $${Number(subscription.price || 0).toFixed(2)}/${subscription.billing_cycle || 'period'}\n`;
     message += `📅 Renewal: ${renewalDateFormatted}\n`;
 
     if (daysBefore > 0) {

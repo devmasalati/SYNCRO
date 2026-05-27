@@ -21,6 +21,9 @@ export class UserPreferenceService {
         quiet_hours_end: '08:00',
         quiet_hours_timezone: 'UTC',
         critical_alerts_only: true,
+        currency: 'USD',
+        timezone: 'UTC',
+        locale: 'en-US',
     };
 
     /**

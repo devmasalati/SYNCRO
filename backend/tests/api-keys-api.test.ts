@@ -18,6 +18,10 @@ const fromImplementation = (tableName: string) => {
           query._single = true;
           return query;
         },
+        maybeSingle: () => {
+          query._maybeSingle = true;
+          return query;
+        },
         then: (resolve: any, reject: any) => {
           const result = selectMock(...args);
           return Promise.resolve(result).then(resolve, reject);

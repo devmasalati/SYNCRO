@@ -493,11 +493,18 @@ describe('SubscriptionService', () => {
         }),
       };
 
+      const mockDeleteQuery = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockResolvedValue({ error: null }),
+      };
+
       const mockClient = {
         from: jest
           .fn()
           .mockReturnValueOnce(mockSelectQuery)
-          .mockReturnValueOnce(mockUpdateQuery),
+          .mockReturnValueOnce(mockUpdateQuery)
+          .mockReturnValueOnce(mockDeleteQuery),
       };
 
       const { DatabaseTransaction } = require('../src/utils/transaction');
@@ -603,11 +610,18 @@ describe('SubscriptionService', () => {
         }),
       };
 
+      const mockDeleteQuery = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockResolvedValue({ error: null }),
+      };
+
       const mockClient = {
         from: jest
           .fn()
           .mockReturnValueOnce(mockSelectQuery)
-          .mockReturnValueOnce(mockUpdateQuery),
+          .mockReturnValueOnce(mockUpdateQuery)
+          .mockReturnValueOnce(mockDeleteQuery),
       };
 
       const { DatabaseTransaction } = require('../src/utils/transaction');
@@ -639,11 +653,16 @@ describe('SubscriptionService', () => {
       const mockQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        range: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve: any) => resolve({
           data: mockSubscriptions,
           error: null,
           count: 2,
-        }),
+        })),
       };
 
       (supabase.from as jest.Mock).mockReturnValue(mockQuery);
@@ -723,11 +742,14 @@ describe('SubscriptionService', () => {
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
-        range: jest.fn().mockResolvedValue({
+        range: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve: any) => resolve({
           data: mockSubscriptions,
           error: null,
           count: 10,
-        }),
+        })),
       };
 
       (supabase.from as jest.Mock).mockReturnValue(mockQuery);
@@ -745,11 +767,16 @@ describe('SubscriptionService', () => {
       const mockQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        range: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve: any) => resolve({
           data: [],
           error: null,
           count: 0,
-        }),
+        })),
       };
 
       (supabase.from as jest.Mock).mockReturnValue(mockQuery);
@@ -764,12 +791,25 @@ describe('SubscriptionService', () => {
       const mockQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
+        order: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        range: jest.fn().mockReturnThis(),
+        delete: jest.fn().mockReturnThis(),
+        single: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve: any) => resolve({
           data: null,
           error: { message: 'Database error' },
-        }),
+        })),
       };
-
+      
+      const mockQuery2 = {
+        delete: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        then: jest.fn().mockImplementation((resolve: any) => resolve({
+          error: null,
+        })),
+      };
+      
       (supabase.from as jest.Mock).mockReturnValue(mockQuery);
 
       await expect(
