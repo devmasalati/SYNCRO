@@ -131,7 +131,7 @@ Open [http://localhost:3000](http://localhost:3000)
 ### Integrations
 - Gmail email scanning (UI ready, integration pending)
 - Outlook email scanning (UI ready, integration pending)
-- Calendar sync (planned)
+- Calendar sync (iCal feed export — see `backend/CALENDAR_INTEGRATION_GUIDE.md`)
 - Slack notifications (planned)
 
 ### Team Management

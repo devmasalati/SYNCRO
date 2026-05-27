@@ -59,6 +59,9 @@ import giftCardLedgerRoutes from './routes/gift-card-ledger';
 import notificationDeadLetterRoutes from './routes/notification-dead-letter';
 import telegramWebhookRoutes from './routes/telegram-webhook';
 import { telegramCommandService } from './services/telegram-command-service';
+import calendarRouter from './routes/calendar';
+import userPreferencesRoutes from './routes/user-preferences';
+import reminderSettingsRoutes from './routes/reminder-settings';
 import { errorHandler } from './middleware/errorHandler';
 import { swaggerSpec } from './swagger';
 
@@ -138,6 +141,9 @@ app.use('/api/notifications/dead-letter', notificationDeadLetterRoutes);
 app.use('/api/exchange-rates', createExchangeRatesRouter(exchangeRateService));
 app.use('/api/gift-card-ledger', giftCardLedgerRoutes);
 app.use('/api/telegram', telegramWebhookRoutes);
+app.use('/api/calendar', calendarRouter);
+app.use('/api/user-preferences', authenticate, userPreferencesRoutes);
+app.use('/api/reminder-settings', authenticate, reminderSettingsRoutes);
 
 app.get('/api/reminders/status', (req, res) => {
   const status = schedulerService.getStatus();

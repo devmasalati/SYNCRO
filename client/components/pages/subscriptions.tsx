@@ -18,6 +18,7 @@ import { KeyboardHelpModal } from "@/components/modals/keyboard-help-modal"
 import { useUserSettings } from "@/components/providers/user-settings-provider"
 import { formatCurrency } from "@/lib/currency-utils"
 import { formatDate, getDaysDifference } from "@/lib/timezone-utils"
+import { fetchCalendarToken as getCalendarToken, downloadCalendarExport, getCalendarFeedUrl, updateCalendarPreferences } from "@/lib/api/calendar"
 
 interface SubscriptionsPageProps {
   subscriptions?: any[]
@@ -124,8 +125,9 @@ export default function SubscriptionsPage({
   }, [])
 
   const [calendarToken, setCalendarToken] = useState<string | null>(null)
-  const [calendarUserId, setCalendarUserId] = useState<string | null>(null)
+  const [calendarFeedUrl, setCalendarFeedUrl] = useState<string | null>(null)
   const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [exportingCalendar, setExportingCalendar] = useState(false)
   const [copied, setCopied] = useState(false)
 
   const emailAccountsList = ["all", ...new Set((subscriptions || []).map((s: any) => s.email).filter(Boolean))]
@@ -142,15 +144,26 @@ export default function SubscriptionsPage({
 
   const fetchCalendarToken = async () => {
     try {
-      const response = await fetch("/api/calendar/token")
-      const data = await response.json()
-      if (data.success) {
-        setCalendarToken(data.token)
-        setCalendarUserId(data.userId)
-        setShowCalendarModal(true)
-      }
+      await updateCalendarPreferences({ calendar_sync_enabled: true })
+      const data = await getCalendarToken()
+      setCalendarToken(data.token)
+      setCalendarFeedUrl(data.feedUrl || getCalendarFeedUrl(data.userId, data.token))
+      setShowCalendarModal(true)
     } catch (error) {
       console.error("Failed to fetch calendar token", error)
+    }
+  }
+
+  const handleExportCalendar = async () => {
+    setExportingCalendar(true)
+    try {
+      await updateCalendarPreferences({ calendar_sync_enabled: true })
+      await downloadCalendarExport()
+      setShowExportMenu(false)
+    } catch (error) {
+      console.error("Failed to export calendar reminders", error)
+    } finally {
+      setExportingCalendar(false)
     }
   }
 
@@ -361,6 +374,22 @@ export default function SubscriptionsPage({
               >
                 <Download className="w-3.5 h-3.5" />
                 Renewals this year
+              </button>
+
+              <hr className={`my-1 ${darkMode ? "border-[#374151]" : "border-gray-100"}`} />
+
+              <p className={`px-3 pt-1 pb-1 text-xs font-semibold uppercase tracking-wide ${darkMode ? "text-gray-500" : "text-gray-400"}`}>
+                Calendar
+              </p>
+              <button
+                onClick={handleExportCalendar}
+                disabled={exportingCalendar}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                  darkMode ? "text-gray-300 hover:bg-[#374151]" : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                {exportingCalendar ? "Exporting…" : "Export reminders (.ics)"}
               </button>
 
               <hr className={`my-1 ${darkMode ? "border-[#374151]" : "border-gray-100"}`} />
@@ -652,7 +681,7 @@ export default function SubscriptionsPage({
           darkMode={darkMode}
         />
       )}
-      {showCalendarModal && calendarToken && (
+      {showCalendarModal && calendarToken && calendarFeedUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div
             className={`${darkMode ? "bg-[#1E2A35] text-white" : "bg-white text-gray-900"} rounded-2xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200`}
@@ -670,17 +699,13 @@ export default function SubscriptionsPage({
             <div className="relative mb-8">
               <input
                 readOnly
-                value={`${window.location.protocol}//${window.location.host}/api/calendar/feed/${calendarUserId}/${calendarToken}.ics`}
+                value={calendarFeedUrl}
                 className={`w-full pr-12 pl-4 py-3 rounded-xl border text-sm ${
                   darkMode ? "bg-[#2D3748] border-[#374151] text-gray-300" : "bg-gray-50 border-gray-200 text-gray-600"
                 }`}
               />
               <button
-                onClick={() =>
-                  copyToClipboard(
-                    `${window.location.protocol}//${window.location.host}/api/calendar/feed/${calendarUserId}/${calendarToken}.ics`,
-                  )
-                }
+                onClick={() => copyToClipboard(calendarFeedUrl)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-black/5 rounded-lg transition-colors"
               >
                 {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5 text-gray-400" />}
@@ -963,4 +988,3 @@ function BrokenCardPlaceholder({ name, darkMode }: { name?: string; darkMode?: b
     </div>
   )
 }
-

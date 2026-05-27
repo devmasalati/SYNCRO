@@ -108,6 +108,8 @@ export interface UserPreferences {
   currency: string;
   timezone: string;
   locale: string;
+  calendar_sync_enabled: boolean;
+  calendar_export_reminders: boolean;
   updated_at: string;
 }
 
@@ -119,4 +121,3 @@ export interface ReminderSettings {
 }
 
 export type PartialUserPreferences = Partial<Omit<UserPreferences, 'user_id' | 'updated_at'>>;
-

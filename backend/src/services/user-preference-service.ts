@@ -24,6 +24,8 @@ export class UserPreferenceService {
         currency: 'USD',
         timezone: 'UTC',
         locale: 'en-US',
+        calendar_sync_enabled: false,
+        calendar_export_reminders: true,
     };
 
     /**

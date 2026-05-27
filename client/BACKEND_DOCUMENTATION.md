@@ -379,9 +379,11 @@ MICROSOFT_REDIRECT_URI=https://yourdomain.com/api/integrations/outlook/auth
 ### Priority 3: Nice to Have (Enhancement)
 
 #### 3.1 Calendar Integration
-**Task**: Sync renewals to Google Calendar
+**Status**: ✅ Implemented (iCal feed export)
 
-**See**: `INTEGRATIONS.md` for implementation guide
+**Task**: Export renewals and reminder schedules to calendar apps via iCal feed
+
+**See**: `../backend/CALENDAR_INTEGRATION_GUIDE.md` for route, service, and UI behavior
 
 #### 3.2 Slack Notifications
 **Task**: Send team notifications to Slack
@@ -683,8 +685,11 @@ POST /api/integrations/stripe/checkout # Create checkout
 POST /api/integrations/stripe/webhook  # Webhook handler
 GET  /api/integrations/stripe/portal   # Customer portal
 
-# Calendar
-POST /api/integrations/calendar/sync   # Sync to calendar
+# Calendar (iCal feed)
+GET  /api/calendar/feed/:userId/:token.ics  # Public iCal feed (token-gated)
+GET  /api/calendar/token                     # Authenticated feed token
+GET  /api/calendar/preferences               # Calendar sync preferences
+PATCH /api/calendar/preferences              # Update calendar sync preferences
 
 # Slack
 POST /api/integrations/slack/notify    # Send notification
@@ -1106,10 +1111,12 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 \`\`\`
 
-### 4. Google Calendar (Renewal Sync)
-**Status**: ❌ Not implemented
-**Priority**: Low
-**See**: `INTEGRATIONS.md` Section 6
+### 4. Calendar Sync (iCal Feed Export)
+**Status**: ✅ Implemented
+**Priority**: P1
+**See**: `../backend/CALENDAR_INTEGRATION_GUIDE.md`
+
+Provides a token-gated iCal feed for subscription renewals and reminder schedules. Google Calendar OAuth push sync remains a future enhancement in `INTEGRATIONS.md` Section 6.
 
 ### 5. Slack (Team Notifications)
 **Status**: ❌ Not implemented
