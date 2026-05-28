@@ -1,7 +1,7 @@
 {
-  "name": "synchro",
+  "name": "@syncro/backend",
   "version": "1.0.0",
-  "description": "backend for synchro",
+  "description": "SYNCRO API backend",
   "license": "ISC",
   "author": "",
   "packageManager": "npm@10.9.2",

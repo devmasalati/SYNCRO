@@ -1,14 +1,14 @@
 {
-  "name": "@synchro/shared",
+  "name": "@syncro/shared",
   "version": "1.0.0",
-  "description": "Shared domain models and types for Synchro",
+  "description": "Shared domain models and types for SYNCRO",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch"
   },
-  "keywords": ["synchro", "types", "domain-models"],
+  "keywords": ["syncro", "types", "domain-models"],
   "license": "ISC",
   "devDependencies": {
     "typescript": "^5.9.3"

@@ -1,5 +1,5 @@
 /**
- * @synchro/shared
+ * @syncro/shared
  * 
  * Shared domain models and types for Synchro application
  * Prevents type drift between client, backend, and SDK

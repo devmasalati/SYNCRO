@@ -1,6 +1,6 @@
-# Synchro Client (Frontend)
+# @syncro/client
 
-The frontend client application for Synchro, built with Next.js 15, React 19, and TypeScript. This is the user-facing web application that provides the subscription management interface, dashboard, analytics, and integration management.
+The frontend client application for SYNCRO (`@syncro/client`), built with Next.js 15, React 19, and TypeScript. This is the user-facing web application that provides the subscription management interface, dashboard, analytics, and integration management.
 
 ## Overview
 

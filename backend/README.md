@@ -1,6 +1,6 @@
-# Synchro Backend
+# @syncro/backend
 
-The backend service for Synchro, a self-custodial subscription management platform. This Express.js server handles API endpoints, authentication, payment processing, and integrations with external services.
+The backend service for SYNCRO (`@syncro/backend`), a self-custodial subscription management platform. This Express.js server handles API endpoints, authentication, payment processing, and integrations with external services.
 
 ## Overview
 
