@@ -30,7 +30,7 @@ import {
   CreateSubscriptionInput,
   Payment,
   UserProfile 
-} from '@synchro/shared';
+} from '@syncro/shared';
 
 // Use in your code with full type safety
 const subscription: Subscription = {
