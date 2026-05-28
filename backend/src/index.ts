@@ -42,6 +42,7 @@ import walletRoutes from './routes/wallet';
 import emailRescanRoutes from './routes/email-rescan';
 import gmailRouter from '../routes/integrations/gmail'
 import outlookRouter from '../routes/integrations/outlook'
+import slackRouter from '../routes/integrations/slack'
 import { createExchangeRatesRouter } from './routes/exchange-rates';
 import { ExchangeRateService } from './services/exchange-rate/exchange-rate-service';
 import { FiatRateProvider } from './services/exchange-rate/fiat-provider';
@@ -128,6 +129,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/integrations/gmail', authenticate, gmailRouter);
 app.use('/api/integrations/outlook', authenticate, outlookRouter);
+app.use('/api/integrations/slack', authenticate, slackRouter);
 app.use('/api/integrations/email', authenticate, emailRescanRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/compliance', complianceRoutes);

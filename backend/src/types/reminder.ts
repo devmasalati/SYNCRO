@@ -14,7 +14,7 @@ export interface NotificationDelivery {
   id: string;
   reminder_schedule_id: string;
   user_id: string;
-  channel: 'email' | 'push' | 'telegram';
+  channel: 'email' | 'push' | 'telegram' | 'slack';
   status: 'pending' | 'sent' | 'failed' | 'retrying';
   attempt_count: number;
   max_attempts: number;
@@ -52,12 +52,6 @@ export interface Subscription {
   credit_card_required: boolean;
   created_at: string;
   updated_at: string;
-  // Trial tracking
-  is_trial: boolean;
-  trial_ends_at: string | null;
-  trial_converts_to_price: number | null;
-  credit_card_required: boolean;
-  website_url: string | null;
 }
 
 export interface UserProfile {
@@ -88,7 +82,7 @@ export interface DeliveryResult {
 
 export interface UserPreferences {
   user_id: string;
-  notification_channels: ('email' | 'push' | 'telegram')[];
+  notification_channels: ('email' | 'push' | 'telegram' | 'slack')[];
   reminder_timing: number[]; // days before
   email_opt_ins: {
     marketing: boolean;

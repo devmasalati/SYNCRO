@@ -4,6 +4,8 @@
 
 SYNCRO uses the [Supabase CLI](https://supabase.com/docs/guides/cli) to manage database migrations.
 All migration files live in `supabase/migrations/` and are applied in lexicographic order.
+`supabase/migrations/` is the canonical migration source of truth for this repository.
+Legacy SQL snapshots under `backend/migrations/` and `backend/scripts/` are kept for reference only.
 
 ### Prerequisites
 
@@ -90,12 +92,15 @@ Every pull request that touches `supabase/migrations/` triggers the
 2. Applies all migrations from scratch (`supabase db push`)
 3. Runs `supabase db lint` to catch SQL issues
 
+Changes under `backend/migrations/` and `backend/scripts/` are not part of the canonical migration validation path.
+
 A PR cannot be merged if this workflow fails.
 
 ### Seed data
 
 `supabase/seed.sql` contains fake data for local development only.
 It is applied automatically by `supabase db reset`.
+Use the same seed file for local development and E2E bootstrap runs.
 
 **Never add real emails, payment data, or any PII to seed.sql.**
 Thank you for your interest in contributing! This guide will help you set up the project, follow conventions, and submit high-quality contributions.

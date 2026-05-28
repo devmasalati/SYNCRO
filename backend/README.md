@@ -9,7 +9,7 @@ The backend is responsible for:
 - **Authentication**: JWT-based auth with HTTP-only cookies; role-based access control (RBAC)
 - **Email Integration**: Gmail and Outlook OAuth scanning for subscription detection
 - **Payment Processing**: Stripe and Paystack webhook handling
-- **Notifications**: Telegram bot, push notifications (Web Push/VAPID), email digests, and quiet-hours support
+- **Notifications**: Telegram bot, Slack webhooks, push notifications (Web Push/VAPID), email digests, and quiet-hours support
 - **Blockchain**: Soroban/Stellar event indexing with Redis-backed dead-letter queue fallback
 - **Observability**: Sentry error tracking, Winston structured logging, health snapshots
 
@@ -121,6 +121,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=...
+
+# Slack notifications
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
 
 # Encryption (for stored API keys)
 ENCRYPTION_KEY=your_32_byte_encryption_key
@@ -343,6 +346,12 @@ All routes are registered in `src/index.ts`. Auth middleware (`authenticate`) is
 | DELETE | `/unsubscribe` | Remove push subscription |
 | GET | `/status` | Get push notification status |
 | GET | `/vapid-public-key` | Get VAPID public key |
+
+### Slack Integration — `/api/integrations/slack`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/status` | Check whether Slack webhook delivery is configured |
 
 ### Risk Score — `/api/risk-score`
 
