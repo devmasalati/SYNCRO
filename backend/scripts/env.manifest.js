@@ -130,6 +130,9 @@ const optional = [
   'SENTRY_AUTH_TOKEN',
   'SENTRY_ORG',
   'SENTRY_PROJECT',
+  'SENTRY_RELEASE',
+  'SENTRY_ENVIRONMENT',
+  'COMMIT_SHA',
 
   // CSP monitoring
   'CSP_MONITORING_ENABLED',
