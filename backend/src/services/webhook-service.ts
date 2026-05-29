@@ -9,6 +9,7 @@ import {
   WebhookCreateInput, 
   WebhookUpdateInput 
 } from '../types/webhook';
+import { validateOutboundUrl, SSRFError } from '../utils/ssrf-protection';
 
 export class WebhookService {
   private readonly MAX_RETRIES = 5;
@@ -211,8 +212,22 @@ export class WebhookService {
       .createHmac('sha256', webhook.secret)
       .update(payloadString)
       .digest('hex');
-
-    try {
+      try {
+        // SSRF guard — re-validate at dispatch time to cover stored URLs and
+        // DNS rebinding attacks (a URL that was safe at registration may resolve
+        // to a private IP by the time delivery is attempted).
+        try {
+          await validateOutboundUrl(webhook.url);
+        } catch (ssrfErr) {
+          const reason = ssrfErr instanceof SSRFError ? ssrfErr.message : String(ssrfErr);
+          logger.warn('Webhook delivery blocked by SSRF protection', {
+            webhookId: webhook.id,
+            url: webhook.url,
+            reason,
+          });
+          return await this.handleDeliveryFailure(deliveryId, webhook.id, 0, `SSRF_BLOCKED: ${reason}`);
+        }
+  
       const response = await fetch(webhook.url, {
         method: 'POST',
         headers: {
