@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import logger from './logger';
+// Load durable deployment manifest (if present) so manifest-provided values
+// populate `process.env` prior to validation. This favors manifests over ad-hoc
+// environment strings when available but does not override explicit env vars.
+import { loadManifestIntoEnv } from '../utils/manifest';
+
+// Best-effort manifest load before any validation/parsing.
+loadManifestIntoEnv(process.env.STELLAR_NETWORK ?? 'testnet');
 
 // Exported so the env manifest parity test (tests/env-manifest.test.ts) can
 // introspect which keys are required vs optional and assert they match
