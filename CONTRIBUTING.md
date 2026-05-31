@@ -194,3 +194,43 @@ Thank you for helping make Synchro better! 🚀
 
 ## Issue Delivery Notes
 When completing an issue, any long-form implementation artifacts, summaries, or delivery notes must be stored in the `docs/archive/` directory rather than the repository root. This keeps the root directory clean and ensures that active project entrypoints are easy to find.
+
+## Database Migrations
+
+### Single Source of Truth
+
+**All database schema changes must go through `supabase/migrations/` only.**
+
+The `backend/migrations/` directory existed previously but has been archived as part of Issue #655.
+It must not be used for any new migrations.
+
+### How to Create a Migration
+
+1. Generate a new migration file:
+```bash
+   supabase migration new your_migration_name
+```
+   This creates a timestamped file in `supabase/migrations/`.
+
+2. Write your SQL in that file.
+
+3. Apply it locally to test:
+```bash
+   supabase db push
+```
+
+4. Commit the file and open a PR.
+
+### Rules
+
+- Never add `.sql` files directly to `backend/migrations/`. The CI check will fail.
+- Never define the same table in both `supabase/migrations/` and anywhere else.
+- All tables must have RLS enabled and at least one policy.
+- Use `TIMESTAMPTZ` for all timestamp columns (not bare `TIMESTAMP`).
+- Blockchain/Soroban timestamps are stored as `BIGINT` Unix epoch seconds - this is intentional.
+
+### Why supabase/migrations/ Wins
+
+SYNCRO uses Supabase as its database provider. The Supabase CLI is the authoritative migration
+runner. Any migrations run outside of it will not be tracked in `supabase_migrations.schema_migrations`
+and will cause sync errors.
