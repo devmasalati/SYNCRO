@@ -78,7 +78,7 @@ export default function DataPrivacyPage() {
           href="/settings/security"
           className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-8 transition-colors"
         >
-          <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg aria-hidden="true" className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           Back to Security Settings
@@ -96,7 +96,7 @@ export default function DataPrivacyPage() {
               history, and profile information.
             </p>
             {exportError && (
-              <p className="text-sm text-red-600 mb-3">{exportError}</p>
+              <p role="alert" className="text-sm text-red-600 mb-3">{exportError}</p>
             )}
             <button
               onClick={handleExport}
@@ -161,18 +161,24 @@ export default function DataPrivacyPage() {
 
       {/* Delete confirmation modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        >
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Account</h3>
+            <h3 id="delete-dialog-title" className="text-lg font-semibold text-gray-900 mb-2">Delete Account</h3>
             <p className="text-sm text-gray-600 mb-4">
               This action will begin a 30-day countdown before your account and all associated data are permanently
               deleted. All active subscriptions will be cancelled immediately.
             </p>
 
             {/* Optional reason */}
-            <label className="block mb-4">
+            <label htmlFor="delete-reason" className="block mb-4">
               <span className="text-sm font-medium text-gray-700">Reason (optional)</span>
               <textarea
+                id="delete-reason"
                 className="mt-1 block w-full text-sm rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 rows={3}
                 placeholder="Tell us why you're leaving…"
@@ -195,12 +201,14 @@ export default function DataPrivacyPage() {
             </label>
 
             {deleteError && (
-              <p className="text-sm text-red-600 mb-4">{deleteError}</p>
+              <p role="alert" className="text-sm text-red-600 mb-4">{deleteError}</p>
             )}
 
             <div className="flex justify-end gap-3">
               <button
                 type="button"
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
                 onClick={() => setModalOpen(false)}
                 className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
               >
