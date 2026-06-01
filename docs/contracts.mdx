@@ -471,3 +471,15 @@ const server = new StellarSdk.SorobanRpc.Server('https://soroban-testnet.stellar
 // Read subscription from contract
 const result = await server.simulateTransaction(...);
 ```
+
+## Backend Interface Compatibility
+
+The backend maintains a TypeScript interface manifest at
+`shared/src/soroban-contract-interfaces.ts` that mirrors the function signatures
+declared in the Rust contracts above. Backend invoke bindings in
+`backend/src/blockchain/backend-contract-bindings.ts` must stay aligned with this
+manifest.
+
+CI runs `backend/tests/integration/contract-interface-drift.test.ts` when contracts
+change, causing failures on interface drift between the backend and deployed
+contract signatures.

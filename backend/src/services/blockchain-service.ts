@@ -16,6 +16,10 @@ import {
   resolveStellarNetwork,
 } from "../../../shared/blockchain-flags";
 import { EXTERNAL_SERVICE_POLICIES } from "../config/external-services";
+import {
+  BLOCKCHAIN_INVOKE_METHODS,
+  resolveSubscriptionMethod,
+} from "../blockchain/backend-contract-bindings";
 
 export type PayloadVersion = '1.0';
 
@@ -253,7 +257,10 @@ export class BlockchainService {
   private async writeToBlockchain(
     eventData: ReminderEventPayload,
   ): Promise<{ transactionHash: string }> {
-    return this.invokeContractWithRetry("log_reminder", this.encodeReminderArgs(eventData));
+    return this.invokeContractWithRetry(
+      BLOCKCHAIN_INVOKE_METHODS.logReminder,
+      this.encodeReminderArgs(eventData),
+    );
   }
 
   /**
@@ -401,7 +408,7 @@ export class BlockchainService {
     operation: "create" | "update" | "delete" | "cancel" | "pause" | "unpause",
     eventData: SubscriptionEventPayload,
   ): Promise<{ transactionHash: string }> {
-    const method = `subscription_${operation}`;
+    const method = resolveSubscriptionMethod(operation);
     return this.invokeContractWithRetry(method, this.encodeSubscriptionArgs(eventData));
   }
 
@@ -494,7 +501,10 @@ export class BlockchainService {
   private async writeGiftCardToBlockchain(
     eventData: GiftCardEventPayload
   ): Promise<{ transactionHash: string }> {
-    return this.invokeContractWithRetry("gift_card_attached", this.encodeGiftCardArgs(eventData));
+    return this.invokeContractWithRetry(
+      BLOCKCHAIN_INVOKE_METHODS.giftCardAttached,
+      this.encodeGiftCardArgs(eventData),
+    );
   }
 
   /**

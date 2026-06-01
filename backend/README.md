@@ -195,9 +195,27 @@ npm run db:reset
 # Run all tests
 npm test
 
+# Backend-to-contract integration tests (simulated Soroban RPC, no secrets required)
+npm test -- tests/integration/
+
 # Tests use Jest + ts-jest with 80% coverage threshold
 # Test files live in backend/tests/*.test.ts
 ```
+
+#### Blockchain contract integration (Backlog #75)
+
+Simulated integration tests in `tests/integration/` verify that `BlockchainService`
+invokes the correct Soroban method names and that backend bindings stay aligned with
+the canonical contract interface manifest in `shared/src/soroban-contract-interfaces.ts`.
+
+| Test file | Purpose |
+|-----------|---------|
+| `integration/blockchain-contract-integration.test.ts` | Simulated RPC invoke + failure modes |
+| `integration/contract-interface-drift.test.ts` | Backend bindings vs deployed contract signatures |
+
+The contracts CI workflow also runs the drift test when Rust contracts change.
+Live testnet tests remain opt-in via `tests/soroban-integration.test.ts`
+(`ENABLE_TESTNET_ACTIONS=true` + Soroban secrets).
 
 ### Other Scripts
 
