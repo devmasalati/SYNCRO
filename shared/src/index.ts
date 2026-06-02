@@ -37,3 +37,6 @@ export * from './rpc-client';
 
 // Sentry shared config
 export * from './sentry';
+
+// Soroban contract interfaces (backend ↔ contract compatibility)
+export * from './soroban-contract-interfaces';

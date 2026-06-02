@@ -59,6 +59,12 @@ jobs:
             - name: Run contract tests
               run: cargo test
 
+            - name: Verify backend contract interface alignment
+              working-directory: ..
+              run: |
+                npm ci --legacy-peer-deps --ignore-scripts --workspace=@syncro/backend --workspace=@syncro/shared 2>/dev/null || npm install --legacy-peer-deps --ignore-scripts --workspace=@syncro/backend --workspace=@syncro/shared
+                npm test -w @syncro/backend -- tests/integration/contract-interface-drift.test.ts
+
             - name: Check contract sizes
               shell: bash
               run: |
