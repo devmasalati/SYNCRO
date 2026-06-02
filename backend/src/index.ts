@@ -63,6 +63,7 @@ import { authenticate } from './middleware/auth'
 import { adminAuth } from './middleware/admin';
 import { createAdminLimiter, RateLimiterFactory } from './middleware/rate-limit-factory';
 import { scheduleAutoResume } from './jobs/auto-resume';
+import { startJobAlertMonitor, stopJobAlertMonitor } from './jobs/job-alert-monitor';
 import giftCardLedgerRoutes from './routes/gift-card-ledger';
 import notificationDeadLetterRoutes from './routes/notification-dead-letter';
 import telegramWebhookRoutes from './routes/telegram-webhook';
@@ -443,6 +444,7 @@ const server = app.listen(PORT, async () => {
   }
 
   scheduleAutoResume();
+  startJobAlertMonitor();
 
   telegramCommandService.init();
   if (process.env.TELEGRAM_BOT_TOKEN && !process.env.TELEGRAM_WEBHOOK_SECRET) {
@@ -454,6 +456,7 @@ const server = app.listen(PORT, async () => {
 const shutdown = () => {
   logger.info('Shutting down gracefully');
   schedulerService.stop();
+  stopJobAlertMonitor();
   telegramCommandService.stop();
   eventListener.stop();
   server.close(() => {

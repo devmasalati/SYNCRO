@@ -11,6 +11,7 @@ import { supabase } from '../config/database';
 import { suggestionService } from './suggestion-service';
 import { idempotencyService } from './idempotency';
 import { subscriptionService } from './subscription-service';
+import { jobAlertService } from './job-alert-service';
 
 export class SchedulerService {
   private jobs: cron.ScheduledTask[] = [];
@@ -23,7 +24,9 @@ export class SchedulerService {
       cron.schedule('0 9 * * *', async () => {
         logger.info('Running scheduled reminder processing');
         try {
-          await reminderEngine.processReminders();
+          await jobAlertService.runMonitoredJob('reminder-processing', () =>
+            reminderEngine.processReminders(),
+          );
         } catch (error) {
           logger.error('Error in scheduled reminder processing:', error);
         }
@@ -35,8 +38,10 @@ export class SchedulerService {
       cron.schedule('0 0 * * *', async () => {
         logger.info('Running scheduled reminder scheduling');
         try {
-          await reminderEngine.scheduleReminders();
-          await reminderEngine.scheduleTrialReminders();
+          await jobAlertService.runMonitoredJob('reminder-scheduling', async () => {
+            await reminderEngine.scheduleReminders();
+            await reminderEngine.scheduleTrialReminders();
+          });
         } catch (error) {
           logger.error('Error in scheduled reminder scheduling:', error);
         }
@@ -48,7 +53,9 @@ export class SchedulerService {
       cron.schedule('*/30 * * * *', async () => {
         logger.info('Running scheduled retry processing');
         try {
-          await reminderEngine.processRetries();
+          await jobAlertService.runMonitoredJob('reminder-retries', () =>
+            reminderEngine.processRetries(),
+          );
         } catch (error) {
           logger.error('Error in scheduled retry processing:', error);
         }
@@ -90,7 +97,9 @@ export class SchedulerService {
       cron.schedule('0 2 * * *', async () => {
         logger.info('Running scheduled expiry processing');
         try {
-          await expiryService.processExpiries();
+          await jobAlertService.runMonitoredJob('expiry-processing', () =>
+            expiryService.processExpiries(),
+          );
         } catch (error) {
           logger.error('Error in scheduled expiry processing:', error);
         }
@@ -113,7 +122,9 @@ export class SchedulerService {
       cron.schedule('*/5 * * * *', async () => {
         logger.info('Running scheduled webhook retry processing');
         try {
-          await webhookService.processRetries();
+          await jobAlertService.runMonitoredJob('webhook-retries', () =>
+            webhookService.processRetries(),
+          );
         } catch (error) {
           logger.error('Error in scheduled webhook retry processing:', error);
         }

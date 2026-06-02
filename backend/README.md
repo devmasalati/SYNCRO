@@ -541,6 +541,7 @@ On RPC failure, the service retries with exponential backoff (3 attempts). After
 | Auto-Resume | Cron | Automatically resumes paused subscriptions |
 | CSP Monitoring | Cron | Refreshes CSP violation stats and sends alerts |
 | Health Snapshot | Every 15 min | Records system health metrics |
+| Job Alert Monitor | Every 5 min | Evaluates critical job failure thresholds |
 | Notification Queue | Event-driven | Processes the delayed notification queue |
 | Expiry Service | Admin trigger | Processes subscription expiries |
 
@@ -555,6 +556,8 @@ On RPC failure, the service retries with exponential backoff (3 attempts). After
 ## Related Documentation
 
 - `backend/ARCHITECTURE.md` — architecture decisions and service map
+- `backend/OPS_DASHBOARD_README.md` — async ops dashboard and metric baselines
+- `docs/JOB_FAILURE_RUNBOOK.md` — job failure alert thresholds and operator runbook
 - `backend/docs/RATE_LIMITING.md` — comprehensive rate limiting documentation
 - `backend/docs/PERFORMANCE_INDEXES_IMPLEMENTATION.md` — performance indexes documentation
 - `backend/docs/PERFORMANCE_INDEXES_QUERY_PLANS.md` — query plans and benchmarking

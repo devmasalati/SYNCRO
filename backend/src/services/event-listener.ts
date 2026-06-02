@@ -31,6 +31,7 @@ import { Subscription } from '../types/subscription';
 export type EventListenerStatus = 'running' | 'stopped' | 'disabled' | 'retrying' | 'failed';
 
 const SUPPORTED_CONTRACT_EVENT_SCHEMA_VERSIONS = [CURRENT_CONTRACT_EVENT_SCHEMA_VERSION] as const;
+/** See job-alert-config.ts `event-listener` thresholds (default: 10 consecutive failures). */
 const ALERT_THRESHOLD = 10;
 const MAX_BACKOFF_MS = 300_000; // 5 minutes
 const MAX_RETRY_ATTEMPTS = 10;

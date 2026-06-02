@@ -55,6 +55,9 @@ Both stacks use the same tag key constants from `SENTRY_TAG_KEYS`:
 | `category` | Error taxonomy: `auth`, `database`, `network`, `validation`, `unknown` |
 | `component` | React component or Express route |
 | `csp_directive` | CSP directive involved in a violation report |
+| `alert_type` | Alert category: `job_failure` for background job threshold breaches |
+| `job_id` | Background job identifier (see `job-alert-config.ts`) |
+| `paging_severity` | `page` (P1), `alert` (P2), or `warn` (P3) |
 
 ## Sensitive data redaction
 
@@ -90,11 +93,16 @@ Breadcrumb `data` payloads are scrubbed with the same body-field rules.
 - **Unhandled exceptions** — both `service:client` and `service:backend`.
 - **CSP violations with `csp_directive` tag** — spike detection on hourly rate.
 - **`category:auth` errors** — potential credential or session issues.
+- **Job failures (`alert_type:job_failure`)** — filter on `paging_severity:page` for P1 on-call. Critical jobs: reminder processing/scheduling/retries, notification queue, event listener. See [JOB_FAILURE_RUNBOOK.md](./JOB_FAILURE_RUNBOOK.md).
 
 ### Medium-priority alerts (P2)
 - **`category:database` errors** — Supabase / Postgres issues.
 - **`category:network` errors** — upstream API failures.
 - **New issue in current release** — catch regressions early.
+- **Job failures with `paging_severity:alert`** — expiry processing, auto-resume, webhook retries.
+
+### Low-priority alerts (P3)
+- **Job failures with `paging_severity:warn`** — CSP monitoring job health.
 
 ### Routing by team
 - Filter on `service:client` to route to frontend team.
@@ -123,5 +131,7 @@ Breadcrumb `data` payloads are scrubbed with the same body-field rules.
 | `client/sentry.server.config.ts` | Next.js server-side Sentry init |
 | `client/sentry.edge.config.ts` | Next.js edge runtime Sentry init |
 | `backend/src/index.ts` | Express Sentry init (lines 13-27) |
+| `backend/src/config/job-alert-config.ts` | Critical job alert thresholds and paging severity |
+| `backend/src/jobs/job-alert-monitor.ts` | Periodic job failure threshold evaluation |
 | `client/lib/telemetry.ts` | Client error/warning tracking helpers |
 | `client/next.config.mjs` | `withSentryConfig` wrapper for source maps |
