@@ -11,6 +11,7 @@ import {
   NotificationPayload,
   NotificationDelivery,
 } from '../types/reminder';
+import { subDays } from 'date-fns';
 import { calculateBackoffDelay } from '../utils/retry';
 import { userPreferenceService } from './user-preference-service';
 import { notificationPreferenceService } from './notification-preference-service';
@@ -140,8 +141,7 @@ export class ReminderEngine {
       const renewalDate = new Date(subscription.active_until as string);
 
       for (const day of timing) {
-        const reminderDate = new Date(renewalDate);
-        reminderDate.setDate(reminderDate.getDate() - day);
+        const reminderDate = subDays(renewalDate, day);
         reminderDate.setHours(0, 0, 0, 0);
 
         if (reminderDate >= today) {
@@ -205,8 +205,7 @@ export class ReminderEngine {
         : [7, 3, 1, 0];
 
       for (const day of reminderWindows) {
-        const reminderDate = new Date(trialEnd);
-        reminderDate.setDate(reminderDate.getDate() - day);
+        const reminderDate = subDays(trialEnd, day);
         reminderDate.setHours(0, 0, 0, 0);
 
         if (reminderDate < today) {
