@@ -297,10 +297,32 @@ export class PaymentService {
   private async savePaymentToDatabase(paymentData: any) {
     try {
       const supabase = await createClient()
-      const { error } = await supabase.from("payments").insert(paymentData)
-      if (error) throw error
+      
+      // Check if payment already exists (idempotency)
+      const { data: existing } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("transaction_id", paymentData.transaction_id)
+        .single()
+
+      if (existing) {
+        console.log('[PaymentService] Payment already exists, updating:', paymentData.transaction_id)
+        const { error } = await supabase
+          .from("payments")
+          .update({
+            ...paymentData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("transaction_id", paymentData.transaction_id)
+        
+        if (error) throw error
+      } else {
+        console.log('[PaymentService] Creating new payment record:', paymentData.transaction_id)
+        const { error } = await supabase.from("payments").insert(paymentData)
+        if (error) throw error
+      }
     } catch (error) {
-      console.error("Failed to save payment to database:", error)
+      console.error("[PaymentService] Failed to save payment to database:", error)
       // We don't want to fail the whole payment if only the logging fails.
       // Webhooks are the reliable source of truth for payment status.
     }

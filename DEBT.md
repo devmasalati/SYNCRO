@@ -13,7 +13,6 @@ pull request that adds an untracked `TODO`/`FIXME` to a critical path.
 
 ```ts
 // TODO(#491): migrate to the new payment SDK
-// FIXME(#496): PayPal integration is stubbed, returns mock response
 ```
 
 - `(#NNN)` is the GitHub issue number — **required** in critical paths.
@@ -42,13 +41,19 @@ Adjust this list in `scripts/check-todos.mjs` (`CRITICAL_PATHS`) and here togeth
 
 | Issue | Location | Severity | Owner | Description | Added |
 |-------|----------|----------|-------|-------------|-------|
-| #496 | `client/app/api/csp-report/route.ts` | high | _unassigned_ | Replace stubbed PayPal integration with real client | 2026-05-29 |
 | #494 | `backend/...` | med | _unassigned_ | Price changes / consolidation suggestions fetched from DB | 2026-05-29 |
 | #698 | `backend/src/services/api-latency-service.ts:68` | med | _unassigned_ | Redis-based API latency storage (currently in-memory fallback) | 2026-05-31 |
 
-> The rows above are seeded from existing issue summaries (`ISSUE_496_*`,
-> `ISSUE_494_*`). Verify the file paths and owners, then keep this table in sync
-> as TODOs are added or resolved.
+> The rows above are seeded from existing issue summaries. Verify the file paths
+> and owners, then keep this table in sync as TODOs are added or resolved.
+
+**Note:** Issue #496 (PayPal integration) has been completed. The PayPal service now includes:
+- Real PayPal Orders API v2 integration with OAuth authentication
+- Automatic retry logic for transient failures
+- Comprehensive error handling with specific error codes
+- Webhook support for payment status updates
+- Database idempotency checks
+- Production-ready payment processing
 
 ---
 
