@@ -4,29 +4,30 @@ import { UserPreferences, PartialUserPreferences } from '../types/reminder';
 
 export class UserPreferenceService {
     private readonly defaultPreferences: Omit<UserPreferences, 'user_id' | 'updated_at'> = {
-        notification_channels: ['email'],
-        reminder_timing: [7, 3, 1],
-        email_opt_ins: {
-            marketing: false,
-            reminders: true,
-            updates: true,
-        },
-        automation_flags: {
-            auto_renew: false,
-            auto_retry: true,
-        },
-        risk_notification_threshold: 'HIGH',
-        quiet_hours_enabled: false,
-        quiet_hours_start: '22:00',
-        quiet_hours_end: '08:00',
-        quiet_hours_timezone: 'UTC',
-        critical_alerts_only: true,
-        currency: 'USD',
-        timezone: 'UTC',
-        locale: 'en-US',
-        calendar_sync_enabled: false,
-        calendar_export_reminders: true,
-    };
+    notification_channels: ['email'],
+    reminder_timing: [7, 3, 1],
+    reminder_jitter_level: 'off', // default to no jitter
+    email_opt_ins: {
+      marketing: false,
+      reminders: true,
+      updates: true,
+    },
+    automation_flags: {
+      auto_renew: false,
+      auto_retry: true,
+    },
+    risk_notification_threshold: 'HIGH',
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '08:00',
+    quiet_hours_timezone: 'UTC',
+    critical_alerts_only: true,
+    currency: 'USD',
+    timezone: 'UTC',
+    locale: 'en-US',
+    calendar_sync_enabled: false,
+    calendar_export_reminders: true,
+  };
 
     /**
      * Get user preferences, returning defaults if not found
