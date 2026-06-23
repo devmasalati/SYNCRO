@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useUserSettings } from '@/components/providers/user-settings-provider';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -9,6 +10,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 type ExportStatus = 'idle' | 'pending' | 'ready' | 'error';
 type DeleteStatus = 'idle' | 'scheduled' | 'error';
+type JitterLevel = 'off' | 'low' | 'medium' | 'high';
 
 interface JobState {
   jobId: string | null;
@@ -68,9 +70,30 @@ function triggerDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+async function fetchUserPreferences(): Promise<{ reminder_jitter_level?: JitterLevel }> {
+  const res = await fetch(`${API_BASE}/api/user-preferences`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch user preferences');
+  const json = await res.json();
+  return json.data;
+}
+
+async function updateUserPreferences(updates: { reminder_jitter_level: JitterLevel }): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/user-preferences`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update user preferences');
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DataPrivacyPage() {
+  const { settings, updateSettings } = useUserSettings();
+  const [isPrivacyModeChanging, setIsPrivacyModeChanging] = useState(false);
   // ── Export state ──────────────────────────────────────────────────────────
   const [exportJob, setExportJob] = useState<JobState>({
     jobId: null,
@@ -90,12 +113,42 @@ export default function DataPrivacyPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Jitter state ──────────────────────────────────────────────────────────
+  const [jitterLevel, setJitterLevel] = useState<JitterLevel>('off');
+  const [jitterLoading, setJitterLoading] = useState(false);
+  const [jitterError, setJitterError] = useState<string | null>(null);
+
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  // ── Load jitter preference ───────────────────────────────────────────────────
+  useEffect(() => {
+    fetchUserPreferences()
+      .then(prefs => {
+        if (prefs.reminder_jitter_level) {
+          setJitterLevel(prefs.reminder_jitter_level);
+        }
+      })
+      .catch(err => console.error(err));
+  }, []);
+
+  // ── Handle jitter change ──────────────────────────────────────────────────
+  const handleJitterChange = async (newLevel: JitterLevel) => {
+    setJitterLoading(true);
+    setJitterError(null);
+    try {
+      await updateUserPreferences({ reminder_jitter_level: newLevel });
+      setJitterLevel(newLevel);
+    } catch (err) {
+      setJitterError(err instanceof Error ? err.message : 'Failed to update preference');
+    } finally {
+      setJitterLoading(false);
+    }
+  };
 
   // ── Export polling ────────────────────────────────────────────────────────
   const stopPolling = useCallback(() => {
@@ -145,7 +198,7 @@ export default function DataPrivacyPage() {
           }));
         } else {
           // still pending
-          setExportJob((prev) => ({ ...prev, lastChecked: now }));
+          setExportJob((prev) => ({ ...prev, lastChecked: now });
         }
       } catch (err) {
         stopPolling();
@@ -233,6 +286,13 @@ export default function DataPrivacyPage() {
   const exportIsBusy = exportJob.status === 'pending';
   const exportLabel = exportIsBusy ? 'Preparing export…' : 'Download Export (ZIP)';
 
+  const jitterOptions: { value: JitterLevel; label: string; description: string }[] = [
+    { value: 'off', label: 'Off', description: 'No jitter — reminders sent exactly on schedule' },
+    { value: 'low', label: 'Low', description: '± 2 hours' },
+    { value: 'medium', label: 'Medium', description: '± 6 hours' },
+    { value: 'high', label: 'High', description: '± 12 hours' },
+  ];
+
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -251,7 +311,78 @@ export default function DataPrivacyPage() {
         <p className="text-sm text-gray-500 mb-8">Manage your personal data and privacy preferences.</p>
 
         <div className="space-y-6">
-          {/* ── Section 1: Export ─────────────────────────────────────────── */}
+          {/* ── Section 1: Privacy Mode ─────────────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="privacy-mode-heading">
+            <h2 id="privacy-mode-heading" className="text-base font-semibold text-gray-900 mb-1">Privacy Mode</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              When enabled, your subscription metadata (names, prices, categories) will be encrypted client-side before being stored in our database. Only you have the encryption key to decrypt and view your data.
+            </p>
+            <div className="flex items-center justify-between">
+              <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={settings.privacyModeEnabled}
+                  onChange={async (e) => {
+                    setIsPrivacyModeChanging(true);
+                    try {
+                      await updateSettings({ privacyModeEnabled: e.target.checked });
+                    } finally {
+                      setIsPrivacyModeChanging(false);
+                    }
+                  }}
+                  disabled={isPrivacyModeChanging}
+                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Enable Privacy Mode</span>
+              </label>
+              </div>
+              {settings.encryptionKey && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 mb-1">Encryption Key:</p>
+                  <p className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                    {settings.encryptionKey.slice(0, 16)}...
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Section: Reminder Jitter ────────────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="jitter-heading">
+            <h2 id="jitter-heading" className="text-base font-semibold text-gray-900 mb-1">Reminder Timing Jitter</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Add random jitter to subscription renewal reminders to prevent network observers from correlating reminders with gift card purchases.
+            </p>
+
+            {jitterError && (
+              <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
+                {jitterError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {jitterOptions.map(option => (
+                <label key={option.value} className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="jitter"
+                    value={option.value}
+                    checked={jitterLevel === option.value}
+                    onChange={() => handleJitterChange(option.value)}
+                    disabled={jitterLoading}
+                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{option.label}</div>
+                    <div className="text-xs text-gray-500">{option.description}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Section: Export ─────────────────────────────────────────── */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="export-heading">
             <h2 id="export-heading" className="text-base font-semibold text-gray-900 mb-1">Export Your Data</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -262,7 +393,7 @@ export default function DataPrivacyPage() {
             {/* Job status banner */}
             {exportJob.status === 'pending' && (
               <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="currentColor" strokeWidth={2}>
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
@@ -272,7 +403,7 @@ export default function DataPrivacyPage() {
 
             {exportJob.status === 'ready' && (
               <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 Your export is ready — download started automatically.
@@ -281,7 +412,7 @@ export default function DataPrivacyPage() {
 
             {exportJob.status === 'error' && (
               <div role="alert" className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
                 <span>
@@ -306,7 +437,7 @@ export default function DataPrivacyPage() {
             </button>
           </section>
 
-          {/* ── Section 2: Email Preferences ─────────────────────────────── */}
+          {/* ── Section: Email Preferences ─────────────────────────────── */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="email-prefs-heading">
             <h2 id="email-prefs-heading" className="text-base font-semibold text-gray-900 mb-1">Email Preferences</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -321,7 +452,7 @@ export default function DataPrivacyPage() {
             </Link>
           </section>
 
-          {/* ── Section 3: Delete Account ─────────────────────────────────── */}
+          {/* ── Section: Delete Account ─────────────────────────────────── */}
           <section className="bg-white rounded-2xl border border-red-200 shadow-sm p-6" aria-labelledby="delete-heading">
             <h2 id="delete-heading" className="text-base font-semibold text-gray-900 mb-1">Delete Account</h2>
             <p className="text-sm text-gray-500 mb-4">

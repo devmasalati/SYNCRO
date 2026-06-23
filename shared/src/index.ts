@@ -40,3 +40,9 @@ export * from './sentry';
 
 // Soroban contract interfaces (backend ↔ contract compatibility)
 export * from './soroban-contract-interfaces';
+
+// Crypto utilities
+export * from './crypto';
+
+// Stealth address deterministic derivation
+export * from './crypto/stealth-derive';
