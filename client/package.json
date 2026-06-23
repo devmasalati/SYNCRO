@@ -92,7 +92,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
     "@chromatic-com/storybook": "^5.0.2",
-    "@next/bundle-analyzer": "^15.5.15",
+    "@next/bundle-analyzer": "^16.2.9",
     "@playwright/test": "^1.59.1",
     "@storybook/addon-a11y": "^10.4.2",
     "@storybook/addon-docs": "^10.4.2",
