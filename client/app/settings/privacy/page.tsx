@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useUserSettings } from '@/components/providers/user-settings-provider';
+import { generateStealthMetaAddress, isValidStealthMetaAddress } from '@syncro/shared';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -117,6 +118,9 @@ export default function DataPrivacyPage() {
   const [jitterLevel, setJitterLevel] = useState<JitterLevel>('off');
   const [jitterLoading, setJitterLoading] = useState(false);
   const [jitterError, setJitterError] = useState<string | null>(null);
+  const [stealthMetaAddress, setStealthMetaAddress] = useState('');
+  const [stealthStatus, setStealthStatus] = useState<string | null>(null);
+  const [stealthLoading, setStealthLoading] = useState(false);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
@@ -147,6 +151,36 @@ export default function DataPrivacyPage() {
       setJitterError(err instanceof Error ? err.message : 'Failed to update preference');
     } finally {
       setJitterLoading(false);
+    }
+  };
+
+  const handleGenerateStealthAddress = () => {
+    const generated = generateStealthMetaAddress();
+    setStealthMetaAddress(generated.encoded);
+    setStealthStatus('Generated a new versioned stealth meta-address. Save it to register it.');
+  };
+
+  const handleRegisterStealthAddress = async () => {
+    if (!isValidStealthMetaAddress(stealthMetaAddress)) {
+      setStealthStatus('Enter a valid versioned stealth meta-address before saving.');
+      return;
+    }
+
+    setStealthLoading(true);
+    setStealthStatus(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/user/stealth-meta-address`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stealthMetaAddress: stealthMetaAddress.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to register stealth meta-address');
+      setStealthStatus('Stealth meta-address saved and protected by your account access rules.');
+    } catch (err) {
+      setStealthStatus(err instanceof Error ? err.message : 'Failed to register stealth meta-address.');
+    } finally {
+      setStealthLoading(false);
     }
   };
 
@@ -344,6 +378,48 @@ export default function DataPrivacyPage() {
                     {settings.encryptionKey.slice(0, 16)}...
                   </p>
                 </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Section: Stealth Meta-address ───────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="stealth-heading">
+            <h2 id="stealth-heading" className="text-base font-semibold text-gray-900 mb-1">Stealth Meta-address</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Register a versioned stealth meta-address to support privacy-preserving payments and recipient discovery. The format is versioned as <span className="font-mono">syncro:stealth:v1:&lt;spend_pubkey&gt;:&lt;view_pubkey&gt;</span>.
+            </p>
+
+            <div className="space-y-3">
+              <label htmlFor="stealth-meta-address" className="block text-sm font-medium text-gray-700">
+                Meta-address
+              </label>
+              <textarea
+                id="stealth-meta-address"
+                value={stealthMetaAddress}
+                onChange={(e) => setStealthMetaAddress(e.target.value)}
+                rows={3}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="syncro:stealth:v1:64hex:64hex"
+              />
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleGenerateStealthAddress}
+                  className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Generate
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegisterStealthAddress}
+                  disabled={stealthLoading}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {stealthLoading ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              {stealthStatus && (
+                <p className="text-sm text-gray-600">{stealthStatus}</p>
               )}
             </div>
           </section>

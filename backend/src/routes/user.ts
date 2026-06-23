@@ -32,6 +32,38 @@ router.get('/role', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+router.post('/stealth-meta-address', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { stealthMetaAddress } = req.body as { stealthMetaAddress?: string };
+
+    if (!stealthMetaAddress || typeof stealthMetaAddress !== 'string') {
+      return res.status(400).json({ success: false, error: 'stealthMetaAddress is required' });
+    }
+
+    const decoded = stealthMetaAddress.trim();
+    const isValid = /^(syncro:stealth:v1):([0-9a-f]{64}):([0-9a-f]{64})$/i.test(decoded);
+    if (!isValid) {
+      return res.status(400).json({ success: false, error: 'Invalid stealth meta-address format' });
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ stealth_meta_address: decoded, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) {
+      logger.error('Error saving stealth meta-address:', error);
+      return res.status(500).json({ success: false, error: 'Failed to save stealth meta-address' });
+    }
+
+    return res.status(200).json({ success: true, data: { stealthMetaAddress: decoded } });
+  } catch (error) {
+    logger.error('Error saving stealth meta-address:', error);
+    return res.status(500).json({ success: false, error: 'Failed to save stealth meta-address' });
+  }
+});
+
 /**
  * GET /api/user/export-data
  * Returns a JSON bundle of every record belonging to the authenticated user.
