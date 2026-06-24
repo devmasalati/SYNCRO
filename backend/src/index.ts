@@ -45,6 +45,7 @@ import digestRoutes from './routes/digest';
 import mfaRoutes from './routes/mfa';
 import pushNotificationRoutes from './routes/push-notifications';
 import walletRoutes from './routes/wallet';
+import keyRotationRoutes from './routes/key-rotation';
 import emailRescanRoutes from './routes/email-rescan';
 import gmailRouter from '../routes/integrations/gmail'
 import outlookRouter from '../routes/integrations/outlook'
@@ -63,6 +64,7 @@ import { authenticate } from './middleware/auth'
 import { adminAuth } from './middleware/admin';
 import { createAdminLimiter, RateLimiterFactory } from './middleware/rate-limit-factory';
 import { scheduleAutoResume } from './jobs/auto-resume';
+import { startSettlementBatchJob } from './jobs/settlement-batch-job';
 import { startJobAlertMonitor, stopJobAlertMonitor } from './jobs/job-alert-monitor';
 import giftCardLedgerRoutes from './routes/gift-card-ledger';
 import notificationDeadLetterRoutes from './routes/notification-dead-letter';
@@ -73,6 +75,7 @@ import userPreferencesRoutes from './routes/user-preferences';
 import reminderSettingsRoutes from './routes/reminder-settings';
 import { blockchainReconciliationService } from './services/blockchain-reconciliation-service';
 import paymentsRoutes from './routes/payments';
+import paymentChannelsRoutes from './routes/payment-channels';
 import { errorHandler } from './middleware/errorHandler';
 import { swaggerSpec } from './swagger';
 
@@ -157,10 +160,12 @@ app.use('/api/digest', digestRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/notifications/push', pushNotificationRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/key-rotation', keyRotationRoutes);
 app.use('/api/notifications/dead-letter', notificationDeadLetterRoutes);
 app.use('/api/exchange-rates', createExchangeRatesRouter(exchangeRateService));
 app.use('/api/gift-card-ledger', giftCardLedgerRoutes);
 app.use('/api/payments', authenticate, paymentsRoutes);
+app.use('/api/payment-channels', authenticate, paymentChannelsRoutes);
 app.use('/api/telegram', telegramWebhookRoutes);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/user-preferences', authenticate, userPreferencesRoutes);
@@ -444,6 +449,7 @@ const server = app.listen(PORT, async () => {
   }
 
   scheduleAutoResume();
+  startSettlementBatchJob();
   startJobAlertMonitor();
 
   telegramCommandService.init();

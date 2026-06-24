@@ -20,6 +20,7 @@ import {
   BLOCKCHAIN_INVOKE_METHODS,
   resolveSubscriptionMethod,
 } from "../blockchain/backend-contract-bindings";
+import { commitmentStorageService } from "./commitment-storage-service";
 
 export type PayloadVersion = '1.0';
 
@@ -183,6 +184,13 @@ export class BlockchainService {
 
       logger.info("Event logged to database", { logId: dbLog.id });
 
+      // Create privacy-preserving commitment (non-blocking)
+      this.createAndRecordEventCommitment({
+        userId,
+        eventType: "reminder_sent",
+        eventData,
+      }).catch((err) => logger.warn("Non-blocking commitment creation failed:", err));
+
       // If contract address is configured, attempt to write to blockchain
       if (this.contractAddress) {
         try {
@@ -326,6 +334,13 @@ export class BlockchainService {
         subscriptionId,
       });
 
+      // Create privacy-preserving commitment (non-blocking)
+      this.createAndRecordEventCommitment({
+        userId,
+        eventType: `subscription_${operation}`,
+        eventData,
+      }).catch((err) => logger.warn("Non-blocking commitment creation failed:", err));
+
       // If contract address is configured, attempt to write to blockchain
       if (this.contractAddress) {
         try {
@@ -445,6 +460,13 @@ export class BlockchainService {
         logger.error('Failed to log gift card event to database:', dbError);
         throw dbError;
       }
+
+      // Create privacy-preserving commitment (non-blocking)
+      this.createAndRecordEventCommitment({
+        userId,
+        eventType: 'gift_card_attached',
+        eventData,
+      }).catch((err) => logger.warn("Non-blocking commitment creation failed:", err));
 
       if (this.contractAddress) {
         try {
@@ -602,6 +624,104 @@ export class BlockchainService {
         lastErr instanceof Error ? lastErr.message : String(lastErr)
       }`,
     );
+  }
+
+  async recordCommitment(
+    commitmentHash: Buffer,
+  ): Promise<{ commitmentIndex: number; transactionHash?: string; error?: string }> {
+    if (!this.contractAddress) {
+      return { commitmentIndex: -1, error: 'SOROBAN_CONTRACT_ADDRESS not configured' };
+    }
+
+    try {
+      const args = [xdr.ScVal.scvBytes(commitmentHash)];
+      const result = await this.invokeContractWithRetry(
+        BLOCKCHAIN_INVOKE_METHODS.recordCommitment,
+        args,
+      );
+
+      const sim = await this.simulateContractCall(
+        BLOCKCHAIN_INVOKE_METHODS.recordCommitment,
+        args,
+      );
+
+      return {
+        commitmentIndex: sim ?? -1,
+        transactionHash: result.transactionHash,
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error('Failed to record commitment on-chain:', errorMessage);
+      return { commitmentIndex: -1, error: errorMessage };
+    }
+  }
+
+  private async simulateContractCall(
+    method: string,
+    args: xdr.ScVal[],
+  ): Promise<number | null> {
+    try {
+      if (!this.contractAddress) return null;
+
+      const rpc = new SorobanRpc.Server(this.rpcUrl);
+      const secret = await secretProvider.getSecret("STELLAR_SECRET_KEY");
+      if (!secret) return null;
+
+      const sourceKeypair = Keypair.fromSecret(secret);
+      const contract = new Contract(this.contractAddress);
+
+      const account = await rpc.getAccount(sourceKeypair.publicKey());
+      const tx = new TransactionBuilder(account, {
+        fee: "100",
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(contract.call(method, ...args))
+        .setTimeout(30)
+        .build();
+
+      const sim = await rpc.simulateTransaction(tx);
+      if (SorobanRpc.Api.isSimulationError(sim)) {
+        logger.warn(`Simulation failed for ${method}: ${sim.error}`);
+        return null;
+      }
+
+      const result = SorobanRpc.Api.isSimulationSuccess(sim) ? sim.result : null;
+      if (result && result.retval) {
+        const val = result.retval;
+        if (val?.switch()?.name === 'scvU64') {
+          return Number(val.u64());
+        }
+      }
+      return null;
+    } catch (err) {
+      logger.warn(`Simulation error for ${method}:`, err);
+      return null;
+    }
+  }
+
+  async createAndRecordEventCommitment(params: {
+    userId: string;
+    eventType: string;
+    eventData: Record<string, unknown>;
+  }): Promise<{ commitmentHash: Buffer; dbId: string | null; commitmentIndex: number } | null> {
+    try {
+      const { commitmentHash, dbId } = await commitmentStorageService.createAndStoreCommitment(params);
+
+      const onChain = await this.recordCommitment(commitmentHash);
+
+      if (dbId && onChain.commitmentIndex >= 0) {
+        await commitmentStorageService.updateCommitmentIndex(dbId, onChain.commitmentIndex);
+      }
+
+      return {
+        commitmentHash,
+        dbId,
+        commitmentIndex: onChain.commitmentIndex,
+      };
+    } catch (err) {
+      logger.error('Failed to create and record event commitment:', err);
+      return null;
+    }
   }
 
   private encodeReminderArgs(eventData: ReminderEventPayload): xdr.ScVal[] {

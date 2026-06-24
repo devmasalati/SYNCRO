@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useUserSettings } from '@/components/providers/user-settings-provider';
+import { generateStealthMetaAddress, isValidStealthMetaAddress } from '@syncro/shared';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -78,7 +80,7 @@ async function fetchUserPreferences(): Promise<{ reminder_jitter_level?: JitterL
   return json.data;
 }
 
-async function updateUserPreferences(updates: { reminder_jitter_level: JitterLevel }): Promise<void> {
+async function updateUserPreferences(updates: { reminder_jitter_level?: JitterLevel; [key: string]: any }): Promise<void> {
   const res = await fetch(`${API_BASE}/api/user-preferences`, {
     method: 'PATCH',
     credentials: 'include',
@@ -88,9 +90,30 @@ async function updateUserPreferences(updates: { reminder_jitter_level: JitterLev
   if (!res.ok) throw new Error('Failed to update user preferences');
 }
 
+async function fetchPrivacyPreferences(): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/privacy-preferences`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch privacy preferences');
+  const json = await res.json();
+  return json.data;
+}
+
+async function updatePrivacyPreferences(updates: any): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/privacy-preferences`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error('Failed to update privacy preferences');
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DataPrivacyPage() {
+  const { settings, updateSettings } = useUserSettings();
+  const [isPrivacyModeChanging, setIsPrivacyModeChanging] = useState(false);
   // ── Export state ──────────────────────────────────────────────────────────
   const [exportJob, setExportJob] = useState<JobState>({
     jobId: null,
@@ -114,6 +137,20 @@ export default function DataPrivacyPage() {
   const [jitterLevel, setJitterLevel] = useState<JitterLevel>('off');
   const [jitterLoading, setJitterLoading] = useState(false);
   const [jitterError, setJitterError] = useState<string | null>(null);
+  const [stealthMetaAddress, setStealthMetaAddress] = useState('');
+  const [stealthStatus, setStealthStatus] = useState<string | null>(null);
+  const [stealthLoading, setStealthLoading] = useState(false);
+
+  // ── Privacy preferences state ─────────────────────────────────────────────
+  const [privacyPrefs, setPrivacyPrefs] = useState({
+    stealthAddressesEnabled: false,
+    encryptionEnabled: false,
+    paymentChannelsEnabled: false,
+    privateAuditLogsEnabled: false,
+    preferredGiftCardProvider: 'paypal',
+  });
+  const [privacyLoading, setPrivacyLoading] = useState(false);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
@@ -131,6 +168,15 @@ export default function DataPrivacyPage() {
         }
       })
       .catch(err => console.error(err));
+    
+    // Load privacy preferences
+    fetchPrivacyPreferences()
+      .then(prefs => {
+        if (prefs) {
+          setPrivacyPrefs(prefs);
+        }
+      })
+      .catch(err => console.error('Failed to load privacy preferences:', err));
   }, []);
 
   // ── Handle jitter change ──────────────────────────────────────────────────
@@ -144,6 +190,36 @@ export default function DataPrivacyPage() {
       setJitterError(err instanceof Error ? err.message : 'Failed to update preference');
     } finally {
       setJitterLoading(false);
+    }
+  };
+
+  const handleGenerateStealthAddress = () => {
+    const generated = generateStealthMetaAddress();
+    setStealthMetaAddress(generated.encoded);
+    setStealthStatus('Generated a new versioned stealth meta-address. Save it to register it.');
+  };
+
+  const handleRegisterStealthAddress = async () => {
+    if (!isValidStealthMetaAddress(stealthMetaAddress)) {
+      setStealthStatus('Enter a valid versioned stealth meta-address before saving.');
+      return;
+    }
+
+    setStealthLoading(true);
+    setStealthStatus(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/user/stealth-meta-address`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stealthMetaAddress: stealthMetaAddress.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to register stealth meta-address');
+      setStealthStatus('Stealth meta-address saved and protected by your account access rules.');
+    } catch (err) {
+      setStealthStatus(err instanceof Error ? err.message : 'Failed to register stealth meta-address.');
+    } finally {
+      setStealthLoading(false);
     }
   };
 
@@ -307,7 +383,103 @@ export default function DataPrivacyPage() {
         <h1 className="text-2xl font-semibold text-gray-900 mb-1">Data &amp; Privacy</h1>
         <p className="text-sm text-gray-500 mb-8">Manage your personal data and privacy preferences.</p>
 
-        <div className="space-y-6">
+        {/* ── Privacy Score Card ────────────────────────────────────────────── */}
+        <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Privacy Score</h3>
+              <p className="text-xs text-gray-600">How many privacy features you've enabled</p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-indigo-600">{privacyScore.current}/{privacyScore.max}</div>
+              <div className="w-32 h-2 bg-gray-200 rounded-full mt-2">
+                <div
+                  className="h-full bg-indigo-600 rounded-full transition-all"
+                  style={{ width: `${(privacyScore.current / privacyScore.max) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+          {/* ── Section 1: Privacy Mode ─────────────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="privacy-mode-heading">
+            <h2 id="privacy-mode-heading" className="text-base font-semibold text-gray-900 mb-1">Privacy Mode</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              When enabled, your subscription metadata (names, prices, categories) will be encrypted client-side before being stored in our database. Only you have the encryption key to decrypt and view your data.
+            </p>
+            <div className="flex items-center justify-between">
+              <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={settings.privacyModeEnabled}
+                  onChange={async (e) => {
+                    setIsPrivacyModeChanging(true);
+                    try {
+                      await updateSettings({ privacyModeEnabled: e.target.checked });
+                    } finally {
+                      setIsPrivacyModeChanging(false);
+                    }
+                  }}
+                  disabled={isPrivacyModeChanging}
+                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Enable Privacy Mode</span>
+              </label>
+              </div>
+              {settings.encryptionKey && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 mb-1">Encryption Key:</p>
+                  <p className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                    {settings.encryptionKey.slice(0, 16)}...
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* ── Section: Stealth Meta-address ───────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="stealth-heading">
+            <h2 id="stealth-heading" className="text-base font-semibold text-gray-900 mb-1">Stealth Meta-address</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Register a versioned stealth meta-address to support privacy-preserving payments and recipient discovery. The format is versioned as <span className="font-mono">syncro:stealth:v1:&lt;spend_pubkey&gt;:&lt;view_pubkey&gt;</span>.
+            </p>
+
+            <div className="space-y-3">
+              <label htmlFor="stealth-meta-address" className="block text-sm font-medium text-gray-700">
+                Meta-address
+              </label>
+              <textarea
+                id="stealth-meta-address"
+                value={stealthMetaAddress}
+                onChange={(e) => setStealthMetaAddress(e.target.value)}
+                rows={3}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="syncro:stealth:v1:64hex:64hex"
+              />
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleGenerateStealthAddress}
+                  className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Generate
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRegisterStealthAddress}
+                  disabled={stealthLoading}
+                  className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {stealthLoading ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              {stealthStatus && (
+                <p className="text-sm text-gray-600">{stealthStatus}</p>
+              )}
+            </div>
+          </section>
+
           {/* ── Section: Reminder Jitter ────────────────────────────────────────── */}
           <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" aria-labelledby="jitter-heading">
             <h2 id="jitter-heading" className="text-base font-semibold text-gray-900 mb-1">Reminder Timing Jitter</h2>
@@ -353,7 +525,7 @@ export default function DataPrivacyPage() {
             {/* Job status banner */}
             {exportJob.status === 'pending' && (
               <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="w-4 h-4 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="currentColor" strokeWidth={2}>
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
@@ -363,7 +535,7 @@ export default function DataPrivacyPage() {
 
             {exportJob.status === 'ready' && (
               <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 Your export is ready — download started automatically.
@@ -372,7 +544,7 @@ export default function DataPrivacyPage() {
 
             {exportJob.status === 'error' && (
               <div role="alert" className="flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
-                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
                 <span>

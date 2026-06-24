@@ -32,6 +32,8 @@ export const userPreferencesUpdateSchema = z.object({
   currency: z.string().min(3).max(5).optional(),
   timezone: z.string().optional(),
   locale: z.string().optional(),
+  privacy_mode_enabled: z.boolean().optional(),
+  encryption_key: z.string().optional(),
 });
 
 // ─── Quiet Hours Schema ─────────────────────────────────────────────────────

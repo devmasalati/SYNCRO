@@ -130,6 +130,8 @@ export interface UserPreferences {
   locale: string;
   calendar_sync_enabled: boolean;
   calendar_export_reminders: boolean;
+  privacy_mode_enabled: boolean;
+  encryption_key?: string;
   /** ISO-8601 UTC string. */
   updated_at: string;
 }

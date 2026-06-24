@@ -1,30 +1,13 @@
 #![no_std]
 
-mod verifier;
+use soroban_sdk::{contract, contractimpl, contracttype, Bytes, BytesN, Env, Map};
 
-#[cfg(test)]
-mod test;
-
-use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, symbol_short, Bytes, BytesN, Env,
-};
-
-#[contracterror]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
-pub enum Error {
-    InvalidProofLength = 1,
-    NullifierAlreadyUsed = 2,
-    ProofVerificationFailed = 3,
-    InvalidTimeWindow = 4,
-    InvalidAmountThreshold = 5,
-}
+pub mod commitment;
 
 #[contracttype]
 #[derive(Clone)]
-enum DataKey {
-    Nullifier(BytesN<32>),
-    Commitment(BytesN<32>),
+pub enum DataKey {
+    Nullifiers,
 }
 
 #[contract]
@@ -32,99 +15,61 @@ pub struct ZkPaymentVerifier;
 
 #[contractimpl]
 impl ZkPaymentVerifier {
-    /// Verify a ZK payment proof and record the commitment + nullifier on success.
-    ///
-    /// Arguments:
-    ///   proof_bytes       — 64-byte proof: proof_key(32) || response(32)
-    ///   commitment        — public commitment to the payment (hides amount + secret)
-    ///   nullifier         — unique nullifier derived from the same secret; prevents replay
-    ///   amount_threshold  — maximum payment amount the proof is valid for (positive)
-    ///   time_window_start — earliest ledger timestamp at which the proof is valid
-    ///   time_window_end   — latest  ledger timestamp at which the proof is valid
-    ///
-    /// Emits `zk_verify / success` with `(commitment, nullifier, amount_threshold)` on success.
-    /// Returns `Err` on any failure; never stores state unless the proof is valid.
-    pub fn verify(
+    /// Verify a payment commitment and record its nullifier.
+    /// Returns true if the commitment is valid and the nullifier is fresh.
+    pub fn verify_and_record(
         env: Env,
-        proof_bytes: Bytes,
-        commitment: BytesN<32>,
-        nullifier: BytesN<32>,
-        amount_threshold: i128,
-        time_window_start: u64,
-        time_window_end: u64,
-    ) -> Result<bool, Error> {
-        if proof_bytes.len() != 64 {
-            return Err(Error::InvalidProofLength);
-        }
-
-        if amount_threshold <= 0 {
-            return Err(Error::InvalidAmountThreshold);
-        }
-
-        if time_window_start >= time_window_end {
-            return Err(Error::InvalidTimeWindow);
-        }
-
-        // Reject replayed nullifiers before doing any crypto work.
-        if env
-            .storage()
-            .persistent()
-            .has(&DataKey::Nullifier(nullifier.clone()))
-        {
-            return Err(Error::NullifierAlreadyUsed);
-        }
-
-        // Reject already-verified commitments.
-        if env
-            .storage()
-            .persistent()
-            .has(&DataKey::Commitment(commitment.clone()))
-        {
-            return Err(Error::NullifierAlreadyUsed);
-        }
-
-        let valid = verifier::verify_proof(
+        user_id: Bytes,
+        service_id: Bytes,
+        amount: u128,
+        timestamp: u64,
+        blinding_factor: BytesN<32>,
+        expected_commitment: BytesN<32>,
+    ) -> bool {
+        let computed = commitment::compute_commitment(
             &env,
-            &proof_bytes,
-            &commitment,
-            &nullifier,
-            amount_threshold,
-            time_window_start,
-            time_window_end,
+            &user_id,
+            &service_id,
+            amount,
+            timestamp,
+            &blinding_factor,
         );
 
-        if !valid {
-            return Err(Error::ProofVerificationFailed);
+        if computed != expected_commitment {
+            return false;
         }
 
-        // Persist nullifier and commitment to prevent replay.
+        let nullifier = commitment::compute_nullifier(&env, &blinding_factor, &service_id);
+
+        let mut nullifiers: Map<BytesN<32>, bool> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Nullifiers)
+            .unwrap_or(Map::new(&env));
+
+        if nullifiers.contains_key(nullifier.clone()) {
+            return false;
+        }
+
+        nullifiers.set(nullifier, true);
         env.storage()
             .persistent()
-            .set(&DataKey::Nullifier(nullifier.clone()), &true);
-        env.storage()
-            .persistent()
-            .set(&DataKey::Commitment(commitment.clone()), &true);
+            .set(&DataKey::Nullifiers, &nullifiers);
 
-        // Emit verification event without exposing private inputs.
-        env.events().publish(
-            (symbol_short!("zk_verify"), symbol_short!("success")),
-            (commitment, nullifier, amount_threshold),
-        );
-
-        Ok(true)
+        true
     }
 
-    /// Returns true if the nullifier has already been consumed.
+    /// Check if a nullifier has already been used.
     pub fn is_nullifier_used(env: Env, nullifier: BytesN<32>) -> bool {
-        env.storage()
+        let nullifiers: Map<BytesN<32>, bool> = env
+            .storage()
             .persistent()
-            .has(&DataKey::Nullifier(nullifier))
-    }
+            .get(&DataKey::Nullifiers)
+            .unwrap_or(Map::new(&env));
 
-    /// Returns true if the commitment has already been verified.
-    pub fn is_commitment_verified(env: Env, commitment: BytesN<32>) -> bool {
-        env.storage()
-            .persistent()
-            .has(&DataKey::Commitment(commitment))
+        nullifiers.contains_key(nullifier)
     }
 }
+
+#[cfg(test)]
+mod test;
