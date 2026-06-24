@@ -1,5 +1,10 @@
 import { getBlockchainFlags } from '../../shared/blockchain-flags';
 import { deriveKeyHex } from '../../shared/src/crypto/key-derivation';
+import {
+  encodeStealthMetaAddress,
+  generateStealthMetaAddress,
+  type StealthMetaAddress,
+} from '../../shared/src/types/stealth';
 
 type WalletInfo = {
   publicKey: string;
@@ -14,6 +19,8 @@ class StellarWalletService {
   private wallet: WalletInfo | null = null;
   private listeners: Map<WalletEventType, Set<WalletEventHandler>> = new Map();
   private readonly STORAGE_KEY = 'stellar_wallet_session';
+  private readonly STEALTH_STORAGE_KEY = 'syncro_stealth_meta_address';
+  private readonly STEALTH_PAYMENTS_KEY = 'syncro_stealth_payment_history';
 
   constructor() {
     this.loadSession();
@@ -117,6 +124,64 @@ class StellarWalletService {
       info: info,
       length: 32,
     });
+  }
+
+  /** Generate and persist a one-time stealth meta-address for privacy payments */
+  generateStealthMetaAddress(): StealthMetaAddress {
+    const meta = generateStealthMetaAddress();
+    this.saveStealthMetaAddress(meta);
+    return meta;
+  }
+
+  getStealthMetaAddress(): StealthMetaAddress | null {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem(this.STEALTH_STORAGE_KEY);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored) as StealthMetaAddress;
+    } catch {
+      return null;
+    }
+  }
+
+  saveStealthMetaAddress(meta: StealthMetaAddress): void {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(this.STEALTH_STORAGE_KEY, JSON.stringify(meta));
+  }
+
+  /** Append a stealth payment record for local audit (unlinkable on-chain) */
+  recordStealthPayment(record: {
+    subscriptionId: string;
+    stealthAddress: string;
+    ephemeralPubkey: string;
+    amount: number;
+    timestamp: string;
+  }): void {
+    if (typeof window === 'undefined') return;
+    const existing = this.getStealthPaymentHistory();
+    existing.push(record);
+    localStorage.setItem(this.STEALTH_PAYMENTS_KEY, JSON.stringify(existing));
+  }
+
+  getStealthPaymentHistory(): Array<{
+    subscriptionId: string;
+    stealthAddress: string;
+    ephemeralPubkey: string;
+    amount: number;
+    timestamp: string;
+  }> {
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem(this.STEALTH_PAYMENTS_KEY);
+    if (!stored) return [];
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return [];
+    }
+  }
+
+  encodeStealthMetaAddress(spendingPubkey: string, viewingPubkey: string): string {
+    return encodeStealthMetaAddress({ spendingPubkey, viewingPubkey });
   }
 
   private saveSession(): void {

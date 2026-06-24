@@ -67,6 +67,17 @@ router.post('/stealth-meta-address', createStealthAddressLimiter(), async (req: 
   }
 });
 
+router.get('/stealth-payments', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { stealthScanner } = await import('../services/stealth-scanner');
+    const payments = await stealthScanner.scanForPayments(req.user!.id);
+    return res.status(200).json({ success: true, data: payments });
+  } catch (error) {
+    logger.error('Error scanning stealth payments:', error);
+    return res.status(500).json({ success: false, error: 'Failed to scan stealth payments' });
+  }
+});
+
 /**
  * GET /api/user/export-data
  * Returns a JSON bundle of every record belonging to the authenticated user.

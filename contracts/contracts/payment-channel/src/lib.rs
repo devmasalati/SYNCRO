@@ -143,12 +143,11 @@ impl PaymentChannelContract {
         channel.balance_a = balance_a;
         channel.balance_b = balance_b;
         channel.sequence = sequence_number;
-        channel.state = ChannelState::Closed;
-        channel.closing_started_at = 0;
+        channel.state = ChannelState::Open;
 
         env.storage().persistent().set(&DataKey::Channel(channel_id), &channel);
         env.events().publish(
-            (symbol_short!("channel"), symbol_short!("close")),
+            (symbol_short!("channel"), symbol_short!("state")),
             (channel_id, balance_a, balance_b, sequence_number),
         );
         Ok(())
