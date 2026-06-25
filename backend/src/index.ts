@@ -47,9 +47,10 @@ import pushNotificationRoutes from './routes/push-notifications';
 import walletRoutes from './routes/wallet';
 import keyRotationRoutes from './routes/key-rotation';
 import emailRescanRoutes from './routes/email-rescan';
-import gmailRouter from '../routes/integrations/gmail'
-import outlookRouter from '../routes/integrations/outlook'
-import slackRouter from '../routes/integrations/slack'
+import gmailRouter from './routes/integrations/gmail'
+import outlookRouter from './routes/integrations/outlook'
+import slackRouter from './routes/integrations/slack'
+import cspViolationsRoutes from './routes/csp-violations'
 import { createExchangeRatesRouter } from './routes/exchange-rates';
 import { ExchangeRateService } from './services/exchange-rate/exchange-rate-service';
 import { FiatRateProvider } from './services/exchange-rate/fiat-provider';
@@ -177,6 +178,11 @@ app.use('/api/integrations/gmail', authenticate, gmailRouter);
 app.use('/api/integrations/outlook', authenticate, outlookRouter);
 app.use('/api/integrations/slack', authenticate, slackRouter);
 app.use('/api/integrations/email', authenticate, emailRescanRoutes);
+// No blanket `authenticate` here: POST / is called server-to-server by the
+// Next.js CSP report handler (gated by its own X-Internal-Request check);
+// the admin-only routes (stats/refresh-stats/user) apply authenticate
+// themselves within csp-violations.ts.
+app.use('/api/csp-violations', cspViolationsRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/tags', tagsRoutes);

@@ -5,10 +5,10 @@ import {
   getOutlookProfile,
   scanOutlookSubscriptions,
 } from '../../services/outlook-service'
-import { encrypt, decrypt } from '../../src/utils/encryption'
-import { createState, consumeState } from '../../utils/oauth-state'
-import { supabase } from '../../src/config/database'
-import { AuthenticatedRequest } from '../../src/middleware/auth'
+import { encrypt, decrypt } from '../../utils/encryption'
+import { createState, consumeState } from '../../../utils/oauth-state'
+import { supabase } from '../../config/database'
+import { AuthenticatedRequest } from '../../middleware/auth'
 
 const router: Router = Router()
 
