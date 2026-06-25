@@ -22,6 +22,8 @@ export interface UserPreferences {
   currency: string
   timezone: string
   locale: string
+  privacy_mode_enabled: boolean
+  encryption_key?: string
   updated_at: string
 }
 
@@ -46,6 +48,8 @@ export interface UserPreferencesUpdateInput {
   currency?: string
   timezone?: string
   locale?: string
+  privacy_mode_enabled?: boolean
+  encryption_key?: string
 }
 
 export interface QuietHoursUpdateInput {

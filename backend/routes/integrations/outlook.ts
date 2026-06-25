@@ -5,6 +5,7 @@ import {
   getOutlookProfile,
   scanOutlookSubscriptions,
 } from '../../services/outlook-service'
+import { encrypt, decrypt } from '../../src/utils/encryption'
 import { createState, consumeState } from '../../utils/oauth-state'
 import { supabase } from '../../src/config/database'
 import { AuthenticatedRequest } from '../../src/middleware/auth'
@@ -47,8 +48,8 @@ router.get('/callback', async (req: AuthenticatedRequest, res: Response, next: N
           user_id: req.user!.id,
           provider: 'outlook',
           email,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token ?? null,
+          access_token: encrypt(tokens.access_token),
+          refresh_token: tokens.refresh_token ? encrypt(tokens.refresh_token) : null,
           token_expiry: expiresAt,
           updated_at: new Date().toISOString(),
         },
@@ -88,9 +89,14 @@ router.post('/scan', async (req: AuthenticatedRequest, res: Response, next: Next
       return res.status(400).json({ error: 'Missing accessToken' })
     }
 
+    // Attempt to decrypt the tokens in case they are passed encrypted
+    // (If they aren't encrypted, decrypt() will return them as-is)
+    const decryptedAccessToken = decrypt(accessToken);
+    const decryptedRefreshToken = refreshToken ? decrypt(refreshToken) : undefined;
+
     const subscriptions = await scanOutlookSubscriptions({
-      accessToken,
-      refreshToken,
+      accessToken: decryptedAccessToken,
+      refreshToken: decryptedRefreshToken,
       expiresAt,
       maxResults,
     })

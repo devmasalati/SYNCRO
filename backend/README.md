@@ -1,6 +1,6 @@
-# SYNCRO Backend
+# @syncro/backend
 
-The backend service for SYNCRO, a self-custodial subscription management platform. This Express.js + TypeScript server handles API endpoints, authentication, payment processing, and integrations with external services.
+The backend service for SYNCRO (`@syncro/backend`), a self-custodial subscription management platform. This Express.js + TypeScript server handles API endpoints, authentication, payment processing, and integrations with external services.
 
 ## Overview
 
@@ -195,9 +195,27 @@ npm run db:reset
 # Run all tests
 npm test
 
+# Backend-to-contract integration tests (simulated Soroban RPC, no secrets required)
+npm test -- tests/integration/
+
 # Tests use Jest + ts-jest with 80% coverage threshold
 # Test files live in backend/tests/*.test.ts
 ```
+
+#### Blockchain contract integration (Backlog #75)
+
+Simulated integration tests in `tests/integration/` verify that `BlockchainService`
+invokes the correct Soroban method names and that backend bindings stay aligned with
+the canonical contract interface manifest in `shared/src/soroban-contract-interfaces.ts`.
+
+| Test file | Purpose |
+|-----------|---------|
+| `integration/blockchain-contract-integration.test.ts` | Simulated RPC invoke + failure modes |
+| `integration/contract-interface-drift.test.ts` | Backend bindings vs deployed contract signatures |
+
+The contracts CI workflow also runs the drift test when Rust contracts change.
+Live testnet tests remain opt-in via `tests/soroban-integration.test.ts`
+(`ENABLE_TESTNET_ACTIONS=true` + Soroban secrets).
 
 ### Other Scripts
 
@@ -523,6 +541,7 @@ On RPC failure, the service retries with exponential backoff (3 attempts). After
 | Auto-Resume | Cron | Automatically resumes paused subscriptions |
 | CSP Monitoring | Cron | Refreshes CSP violation stats and sends alerts |
 | Health Snapshot | Every 15 min | Records system health metrics |
+| Job Alert Monitor | Every 5 min | Evaluates critical job failure thresholds |
 | Notification Queue | Event-driven | Processes the delayed notification queue |
 | Expiry Service | Admin trigger | Processes subscription expiries |
 
@@ -537,6 +556,8 @@ On RPC failure, the service retries with exponential backoff (3 attempts). After
 ## Related Documentation
 
 - `backend/ARCHITECTURE.md` — architecture decisions and service map
+- `backend/OPS_DASHBOARD_README.md` — async ops dashboard and metric baselines
+- `docs/JOB_FAILURE_RUNBOOK.md` — job failure alert thresholds and operator runbook
 - `backend/docs/RATE_LIMITING.md` — comprehensive rate limiting documentation
 - `backend/docs/PERFORMANCE_INDEXES_IMPLEMENTATION.md` — performance indexes documentation
 - `backend/docs/PERFORMANCE_INDEXES_QUERY_PLANS.md` — query plans and benchmarking

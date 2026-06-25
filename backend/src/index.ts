@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import swaggerUi from 'swagger-ui-express';
 import * as bip39 from 'bip39';
+import { resolveRelease, resolveEnvironment, scrubEvent, SENTRY_TAG_KEYS } from '../../shared/src/sentry';
 
 // Load environment variables before importing other modules
 dotenv.config();
@@ -12,10 +13,15 @@ dotenv.config();
 // Sentry Initialization
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV || 'development',
+  release: resolveRelease(),
+  environment: resolveEnvironment(),
   integrations: [nodeProfilingIntegration()],
-  tracesSampleRate: 0.1,
+  tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
   profilesSampleRate: 0.1,
+  initialScope: {
+    tags: { [SENTRY_TAG_KEYS.service]: 'backend' },
+  },
+  beforeSend: scrubEvent,
 });
 
 import logger from './config/logger';
@@ -39,6 +45,7 @@ import digestRoutes from './routes/digest';
 import mfaRoutes from './routes/mfa';
 import pushNotificationRoutes from './routes/push-notifications';
 import walletRoutes from './routes/wallet';
+import keyRotationRoutes from './routes/key-rotation';
 import emailRescanRoutes from './routes/email-rescan';
 import gmailRouter from '../routes/integrations/gmail'
 import outlookRouter from '../routes/integrations/outlook'
@@ -57,6 +64,8 @@ import { authenticate } from './middleware/auth'
 import { adminAuth } from './middleware/admin';
 import { createAdminLimiter, RateLimiterFactory } from './middleware/rate-limit-factory';
 import { scheduleAutoResume } from './jobs/auto-resume';
+import { startSettlementBatchJob } from './jobs/settlement-batch-job';
+import { startJobAlertMonitor, stopJobAlertMonitor } from './jobs/job-alert-monitor';
 import giftCardLedgerRoutes from './routes/gift-card-ledger';
 import notificationDeadLetterRoutes from './routes/notification-dead-letter';
 import telegramWebhookRoutes from './routes/telegram-webhook';
@@ -64,6 +73,10 @@ import { telegramCommandService } from './services/telegram-command-service';
 import calendarRouter from './routes/calendar';
 import userPreferencesRoutes from './routes/user-preferences';
 import reminderSettingsRoutes from './routes/reminder-settings';
+import { blockchainReconciliationService } from './services/blockchain-reconciliation-service';
+import paymentsRoutes from './routes/payments';
+import agentWalletsRoutes from './routes/agent-wallets';
+import paymentChannelsRoutes from './routes/payment-channels';
 import { errorHandler } from './middleware/errorHandler';
 import { swaggerSpec } from './swagger';
 
@@ -148,9 +161,12 @@ app.use('/api/digest', digestRoutes);
 app.use('/api/mfa', mfaRoutes);
 app.use('/api/notifications/push', pushNotificationRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/key-rotation', keyRotationRoutes);
 app.use('/api/notifications/dead-letter', notificationDeadLetterRoutes);
 app.use('/api/exchange-rates', createExchangeRatesRouter(exchangeRateService));
 app.use('/api/gift-card-ledger', giftCardLedgerRoutes);
+app.use('/api/payments', authenticate, paymentsRoutes);
+app.use('/api/payment-channels', authenticate, paymentChannelsRoutes);
 app.use('/api/telegram', telegramWebhookRoutes);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/user-preferences', authenticate, userPreferencesRoutes);
@@ -162,6 +178,8 @@ app.get('/api/reminders/status', (req, res) => {
 });
 
 // Admin Monitoring Endpoints
+app.use('/api/admin/agent-wallets', createAdminLimiter(), agentWalletsRoutes);
+
 app.get('/api/admin/metrics/subscriptions', createAdminLimiter(), adminAuth, async (req, res) => {
   try {
     const metrics = await monitoringService.getSubscriptionMetrics();
@@ -258,6 +276,16 @@ app.get('/api/admin/metrics/failed-items', createAdminLimiter(), adminAuth, asyn
   }
 });
 
+app.get('/api/admin/metrics/api-latency', createAdminLimiter(), adminAuth, async (req, res) => {
+  try {
+    const metrics = await monitoringService.getApiLatencyMetrics();
+    res.json(metrics);
+  } catch (error) {
+    logger.error('Error fetching API latency metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch API latency metrics' });
+  }
+});
+
 app.get('/api/admin/metrics/ops-summary', createAdminLimiter(), adminAuth, async (req, res) => {
   try {
     const w = req.query.window as string;
@@ -265,7 +293,7 @@ app.get('/api/admin/metrics/ops-summary', createAdminLimiter(), adminAuth, async
     if (isNaN(windowHours) || windowHours < 1 || windowHours > 720) {
       return res.status(400).json({ error: 'window must be between 1 and 720 hours' });
     }
-    const [subscriptions, renewals, activity, trials, throughput, latency, retries] =
+    const [subscriptions, renewals, activity, trials, throughput, latency, retries, apiLatency] =
       await Promise.all([
         monitoringService.getSubscriptionMetrics(),
         monitoringService.getRenewalMetrics(),
@@ -274,6 +302,7 @@ app.get('/api/admin/metrics/ops-summary', createAdminLimiter(), adminAuth, async
         monitoringService.getThroughputMetrics(windowHours),
         monitoringService.getLatencyMetrics(windowHours),
         monitoringService.getRetryMetrics(windowHours),
+        monitoringService.getApiLatencyMetrics(),
       ]);
     res.json({
       generated_at: new Date().toISOString(),
@@ -285,6 +314,7 @@ app.get('/api/admin/metrics/ops-summary', createAdminLimiter(), adminAuth, async
       throughput,
       latency,
       retries,
+      api_latency: apiLatency,
       db_pool: monitoringService.getPoolMetrics(),
     });
   } catch (error) {
@@ -350,6 +380,23 @@ app.post('/api/admin/expiry/process', createAdminLimiter(), adminAuth, async (re
   }
 });
 
+// ── Blockchain Reconciliation Endpoints ──────────────────────────────────────
+
+app.post('/api/admin/reconciliation/run', createAdminLimiter(), adminAuth, async (req, res) => {
+  try {
+    const windowDays = parseInt(req.query.window_days as string) || 90;
+    const autoRepair = req.query.auto_repair === 'true';
+    const result = await blockchainReconciliationService.runReconciliation(windowDays, autoRepair);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error('Error running blockchain reconciliation:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Reconciliation failed',
+    });
+  }
+});
+
 // Error Handlers
 app.use(Sentry.Handlers.errorHandler());
 app.use(errorHandler);
@@ -405,6 +452,8 @@ const server = app.listen(PORT, async () => {
   }
 
   scheduleAutoResume();
+  startSettlementBatchJob();
+  startJobAlertMonitor();
 
   telegramCommandService.init();
   if (process.env.TELEGRAM_BOT_TOKEN && !process.env.TELEGRAM_WEBHOOK_SECRET) {
@@ -416,6 +465,7 @@ const server = app.listen(PORT, async () => {
 const shutdown = () => {
   logger.info('Shutting down gracefully');
   schedulerService.stop();
+  stopJobAlertMonitor();
   telegramCommandService.stop();
   eventListener.stop();
   server.close(() => {
